@@ -281,24 +281,28 @@ with main_content_col:
 
         progress_pct_val = progress_ratio * 100
 
-        # 1. 상단 진행 상황 카드 2개로 통합 및 폰트 대폭 확대
+        # 1. 상단 진행 상황 그래프 및 3분할 하단 카드 (총 시드 / 사용한 시드 / 남은 잔금)
         card1_html = f"""
         <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <div style="font-size: 1.15rem; font-weight: 800; color: #111315;">진행 상황</div>
                 <div style="font-size: 1.3rem; font-weight: 800; color: #2563EB;">{progress_pct_val:.1f}%</div>
             </div>
-            <div style="width: 100%; background: #E5E7EB; border-radius: 9999px; height: 12px; overflow: hidden; margin-bottom: 20px;">
+            <div style="width: 100%; background: #E5E7EB; border-radius: 9999px; height: 12px; overflow: hidden; margin-bottom: 22px;">
                 <div style="width: {progress_pct_val}%; background: #2563EB; height: 100%; border-radius: 9999px;"></div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1px solid #F3F4F6; padding-top: 18px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; border-top: 1px solid #F3F4F6; padding-top: 18px;">
                 <div>
-                    <div style="font-size: 0.85rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">총 시드</div>
-                    <div style="font-size: 1.6rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                    <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">총 시드</div>
+                    <div style="font-size: 1.35rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
                 </div>
                 <div>
-                    <div style="font-size: 0.85rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">사용한 시드 (매입금액)</div>
-                    <div style="font-size: 1.6rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                    <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">사용한 시드</div>
+                    <div style="font-size: 1.35rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">남은 잔금</div>
+                    <div style="font-size: 1.35rem; font-weight: 800; color: #111315;">{remaining_cash_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
                 </div>
             </div>
         </div>
