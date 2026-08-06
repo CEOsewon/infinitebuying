@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (거래 내역 이미지 완벽 연동 버전)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (최종 UI 정돈 및 거래 입력 간소화 버전)
 =====================================================================================
 """
 
@@ -64,7 +64,7 @@ DEFAULT_SETTINGS = {
     "use_manual_market_data": False,
     "manual_prev_close": 0.0,
     "manual_ma5": 0.0,
-    "trade_history": [],  # 스크린샷 형태의 거래 내역 리스트
+    "trade_history": [],
 }
 
 def load_settings() -> dict:
@@ -267,8 +267,8 @@ with st.container(border=True):
         st.markdown(f"<span class='badge-purple'>Star값 {star_display}</span> &nbsp; <span class='badge-blue'>{detected_mode}</span>", unsafe_allow_html=True)
 
 
-# 탭 구성
-tab1, tab2 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래 내역 빠른 입력 (이미지 연동)"])
+# 탭 구성 (요청에 따라 '거래내역 입력'으로 짧게 변경)
+tab1, tab2 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래내역 입력"])
 
 with tab1:
     st.subheader("오늘의 주문 전략 가이드")
@@ -310,7 +310,6 @@ with tab1:
                     st.metric("매수 단가", f"${buy_point_price_normal:,.2f}")
                     st.metric("매수 수량", f"{q_full:,} 주")
 
-                # 매수 가이드 박스 내부에 작고 연한 폰트의 사다리 주문 세로 정렬
                 st.markdown("<div style='border-top: 1px dashed #E9ECEF; margin: 15px 0 10px 0;'></div>", unsafe_allow_html=True)
                 st.markdown("<span style='color: #868E96; font-size: 0.8rem; font-weight: 700;'>🚨 폭락장 대비 50% 하락 사다리 (8단계)</span>", unsafe_allow_html=True)
                 
@@ -327,31 +326,46 @@ with tab1:
         st.info(f"현재 **{detected_mode}** 상태입니다.")
 
 with tab2:
-    st.subheader("⚡ 거래 내역 빠른 입력 (이미지 양식 맞춤형)")
+    st.subheader("⚡ 거래내역 입력")
     with st.container(border=True):
-        st.write("스크린샷의 양식(`매수 +1`, `매수 +0` 등 세부구분, 날짜, 체결가, 수량)에 맞춰 거래를 추가하고 계좌 상태를 실시간으로 크로스 체크하세요.")
+        # 매수 / 매도 버튼에 따른 동적 옵션 분기
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            is_buy_mode = st.button("🟢 매수 거래", use_container_width=True, type="primary" if st.session_state.get("trade_mode_btn", "매수") == "매수" else "secondary")
+            if is_buy_mode:
+                st.session_state.trade_mode_btn = "매수"
+        with col_btn2:
+            is_sell_mode = st.button("🔵 매도 거래", use_container_width=True, type="primary" if st.session_state.get("trade_mode_btn", "매수") == "매도" else "secondary")
+            if is_sell_mode:
+                st.session_state.trade_mode_btn = "매도"
 
-        col_f1, col_f2, col_f3 = st.columns(3)
+        current_trade_mode = st.session_state.get("trade_mode_btn", "매수")
+        st.markdown(f"현재 선택된 모드: <b>{current_trade_mode} 거래</b>", unsafe_allow_html=True)
+        st.markdown("<div style='border-bottom: 1px solid #E9ECEF; margin: 10px 0;'></div>", unsafe_allow_html=True)
+
+        col_f1, col_f2 = st.columns(2)
         with col_f1:
-            trade_action = st.selectbox("거래 구분", ["매수 +1", "매수 +0", "매도 (익절/기타)", "매도 (-1회치 이상)"])
-        with col_f2:
             trade_date = st.date_input("체결 날짜", value=datetime.today())
-        with col_f3:
-            t_impact = st.number_input("T값 증감 수치 (예: +1, +0, -0.25 등)", value=1.0, step=0.25, format="%.2f")
+        with col_f2:
+            if current_trade_mode == "매수":
+                sub_action = st.selectbox("상세 구분", ["매수 +1", "매수 +0.5", "매수 +0"])
+                t_impact = 1.0 if "+1" in sub_action else (0.5 if "+0.5" in sub_action else 0.0)
+            else:
+                sub_action = st.selectbox("상세 구분", ["매도 x0.75", "매도 전량 x0"])
+                t_impact = -0.25 if "0.75" in sub_action else -1.0 # 예시 매도 영향도 (필요에 따라 조절)
 
-        col_f4, col_f5 = st.columns(2)
-        exec_price = col_f4.number_input("체결가 ($)", min_value=0.0, step=0.01, value=100.0, format="%.2f")
-        exec_shares = col_f5.number_input("수량 (주)", min_value=1, step=1, value=1)
+        col_f3, col_f4 = st.columns(2)
+        exec_price = col_f3.number_input("체결가 ($)", min_value=0.0, step=0.01, value=100.0, format="%.2f")
+        exec_shares = col_f4.number_input("수량 (주)", min_value=1, step=1, value=1)
         
         total_exec_amount = exec_price * exec_shares
-        st.markdown(f"<span style='color: #495057; font-size: 0.85rem;'>💡 총 거래액 자동 계산: <b>${total_exec_amount:,.2f}</b> (${exec_price:,.2f} × {exec_shares}주)</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color: #495057; font-size: 0.85rem;'>총 거래액: <b>${total_exec_amount:,.2f}</b> (${exec_price:,.2f} × {exec_shares}주)</span>", unsafe_allow_html=True)
 
         if st.button("➕ 거래 내역 추가 및 계좌 반영", type="primary"):
-            # 1. 히스토리 리스트에 추가
             history_list = st.session_state.get("trade_history", [])
             new_record = {
                 "id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
-                "action": trade_action,
+                "action": sub_action,
                 "date": trade_date.strftime("%Y.%m.%d"),
                 "price": round(exec_price, 2),
                 "shares": int(exec_shares),
@@ -361,9 +375,6 @@ with tab2:
             history_list.insert(0, new_record)
             update_setting("trade_history", history_list)
 
-            # 2. 계좌 상태 자동 동기화 (재계산)
-            # 전체 히스토리를 기반으로 현재 보유수량 및 평단가 재산출 (매수의 경우 가중평균)
-            # 단, T값은 누적 합산 적용
             recalc_shares = 0
             recalc_total_cost = 0.0
             recalc_t = 0.0
@@ -375,23 +386,22 @@ with tab2:
                     recalc_total_cost += h["amount"]
                 elif "매도" in h["action"]:
                     recalc_shares = max(recalc_shares - h["shares"], 0)
-                    # 매도시 잔여 주식 비율만큼 원가 차감 또는 유지 (기본 무한매수 로직 반영)
 
             recalc_avg_price = (recalc_total_cost / recalc_shares) if recalc_shares > 0 else 0.0
 
             update_setting("current_shares", recalc_shares)
             update_setting("avg_price", round(recalc_avg_price, 2))
-            update_setting("t_value", round(recalc_t, 2))
+            update_setting("t_value", round(max(recalc_t, 0.0), 2))
 
-            st.success("거래 내역이 추가되고 보유 수량 및 평단가, T값이 성공적으로 동기화되었습니다!")
+            st.success("반영 완료!")
             st.rerun()
 
-    # 이미지 스타일의 거래 내역 테이블 출력 뷰
-    st.markdown("### 📋 등록된 거래 내역 목록")
+    # 거래 내역 목록 뷰
+    st.markdown("### 📋 거래 내역 목록")
     history_list = st.session_state.get("trade_history", [])
     
     if history_list:
-        if st.button("🗑️ 전체 거래 내역 초기화"):
+        if st.button("🗑️ 전체 초기화"):
             update_setting("trade_history", [])
             update_setting("current_shares", 0)
             update_setting("avg_price", 0.0)
@@ -405,12 +415,10 @@ with tab2:
             col_h3.markdown(f"<b>${item['price']:,.2f}</b> <span style='color: #868E96; font-size: 0.8rem;'>(${item['amount']:,.2f})</span>", unsafe_allow_html=True)
             col_h4.markdown(f"<b>{item['shares']}주</b>", unsafe_allow_html=True)
             
-            # X 버튼 (개별 삭제 및 계좌 재동기화)
-            if col_h5.button("✕", key=f"del_{item['id']}ــ{idx}"):
+            if col_h5.button("✕", key=f"del_{item['id']}_{idx}"):
                 history_list.pop(idx)
                 update_setting("trade_history", history_list)
                 
-                # 삭제 후 계좌 상태 재계산
                 recalc_shares = 0
                 recalc_total_cost = 0.0
                 recalc_t = 0.0
@@ -425,12 +433,11 @@ with tab2:
 
                 update_setting("current_shares", recalc_shares)
                 update_setting("avg_price", round(recalc_avg_price, 2))
-                update_setting("t_value", round(recalc_t, 2))
+                update_setting("t_value", round(max(recalc_t, 0.0), 2))
                 st.rerun()
             st.markdown("<div style='border-bottom: 1px solid #E9ECEF; margin: 4px 0;'></div>", unsafe_allow_html=True)
     else:
-        st.info("기록된 거래 내역이 없습니다. 위에서 거래 내역을 추가해 보세요.")
+        st.info("기록된 거래 내역이 없습니다.")
 
-# 하단 푸터
 st.divider()
 st.caption(f"🚀 Road to Billionaire Engine | 종목: {ticker} | 분할: {split_n}회 | T값: {t_value:g}")
