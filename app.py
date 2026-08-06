@@ -37,7 +37,7 @@ except ImportError:
 # =================================================================================
 # 0. 기본 페이지 설정 & 스타일 (FIRE GATE 스타일 참고: 다크 사이드바 + 화이트 카드)
 # =================================================================================
-st.set_page_config(page_title="무한매수법 V4.0 대시보드", layout="wide", page_icon="🔥")
+st.set_page_config(page_title="Road to Billionaire", layout="wide", page_icon="🔥")
 
 CUSTOM_CSS = """
 <style>
