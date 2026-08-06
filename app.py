@@ -279,27 +279,47 @@ with main_content_col:
         star_pct_val_str = f"{star_pct*100:.2f}%"
         target_pct_val_str = f"{target_pct*100:.0f}%"
 
-        # 1. 상단 진행 상황 카드 (안전한 스트림릿 네이티브 컨테이너 기반)
-        with st.container(border=True):
-            col_pt1, col_pt2 = st.columns([8, 2])
-            col_pt1.markdown("**진행 상황**")
-            col_pt2.markdown(f"<div style='text-align: right; font-weight: 800; color: #2563EB;'>{progress_ratio*100:.1f}%</div>", unsafe_allow_html=True)
+        # 1. 상단 진행 상황 카드 (완벽한 커스텀 HTML 카드 디자인 적용)
+        progress_pct_val = progress_ratio * 100
+        progress_card_html = f"""
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">진행 상황</div>
+                <div style="font-size: 1rem; font-weight: 800; color: #2563EB;">{progress_pct_val:.1f}%</div>
+            </div>
             
-            st.progress(float(progress_ratio))
+            <div style="width: 100%; background: #E5E7EB; border-radius: 9999px; height: 10px; overflow: hidden; margin-bottom: 20px;">
+                <div style="width: {progress_pct_val}%; background: #2563EB; height: 100%; border-radius: 9999px;"></div>
+            </div>
             
-            st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
-            col_m1, col_m2 = st.columns(2)
-            col_m1.metric("시드", f"{total_principal:,.0f} USD")
-            col_m2.metric("사용한 시드", f"{used_amount_calc:,.2f} USD")
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">시드</div>
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">사용한 시드</div>
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
+            </div>
             
-            st.divider()
-            
-            col_sub1, col_sub2, col_sub3 = st.columns(3)
-            col_sub1.metric("매입 금액", f"{used_amount_calc:,.2f} USD")
-            col_sub2.metric("평단가", f"{avg_price:,.3f} USD")
-            col_sub3.metric("보유 수량", f"{current_shares:,} 주")
-
-        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+            <div style="border-top: 1px solid #F3F4F6; padding-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">매입 금액</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.75rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">평단가</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{avg_price:,.3f} <span style="font-size: 0.75rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">보유 수량</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{current_shares:,} <span style="font-size: 0.75rem; color: #6B7280; font-weight: 600;">주</span></div>
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(progress_card_html, unsafe_allow_html=True)
 
         # 2. 가이드 헤더 및 상태 배지
         header_html = f"""
