@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (완벽한 모던 UI 디자인 복원 버전)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (전체 디자인 통일 버전)
 =====================================================================================
 """
 
@@ -22,13 +22,19 @@ st.set_page_config(page_title="무한매수법 V4.0 대시보드", layout="wide"
 CUSTOM_UI_CSS = """
 <style>
     .stApp { background-color: #F8F9FA; color: #212529; }
-    section[data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E9ECEF; }
-    section[data-testid="stSidebar"] * { color: #212529 !important; }
-    h1, h2, h3, h4 { color: #111315; font-weight: 800; }
     
-    input, div[data-testid="stNumberInput"] input, div[data-baseweb="select"] > div {
-        border: 1px solid #CED4DA !important; border-radius: 8px !important;
+    /* 사이드바 스타일 모던하게 정돈 */
+    section[data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E5E7EB; padding-top: 10px; }
+    section[data-testid="stSidebar"] * { color: #212529 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"], 
+    section[data-testid="stSidebar"] div[data-testid="stNumberInput"] input {
+        background-color: #FAFAFA !important;
+        border: 1px solid #E5E7EB !important;
+        border-radius: 10px !important;
     }
+    
+    h1, h2, h3, h4 { color: #111315; font-weight: 800; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    
     .stTabs [data-baseweb="tab"] { font-weight: 700; font-size: 1rem; color: #4B5563; }
     .stTabs [aria-selected="true"] { color: #2563EB !important; }
     .stTabs [data-baseweb="tab-highlight"] { background-color: #2563EB !important; }
@@ -38,6 +44,7 @@ CUSTOM_UI_CSS = """
         color: #065F46 !important;
         border: 1px solid #A3E635 !important;
         font-weight: 700 !important;
+        border-radius: 10px !important;
     }
     .stButton button[kind="primary"]:hover {
         background-color: #A7F3D0 !important;
@@ -116,13 +123,13 @@ def fetch_market_data(ticker_symbol: str):
 
 
 # =================================================================================
-# 3. 사이드바 설정
+# 3. 사이드바 설정 (디자인 통일)
 # =================================================================================
 with st.sidebar:
-    st.markdown("### 🚀 Road to Billionaire")
+    st.markdown("<div style='font-size: 1.1rem; font-weight: 800; color: #111315; margin-bottom: 5px;'>🚀 Road to Billionaire</div>", unsafe_allow_html=True)
     st.divider()
 
-    st.markdown("#### ⚙️ 기본 설정")
+    st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: #4B5563; margin-bottom: 8px;'>⚙️ 기본 설정</div>", unsafe_allow_html=True)
     ticker_val = st.selectbox("종목 선택", ["SOXL", "TQQQ"], index=0 if st.session_state.ticker == "SOXL" else 1, key="sb_ticker")
     if ticker_val != st.session_state.ticker:
         update_setting("ticker", ticker_val)
@@ -133,7 +140,7 @@ with st.sidebar:
         update_setting("split_n", split_n_val)
         st.rerun()
 
-    st.markdown("#### 💰 수동 자산 상태 (입력값 유지)")
+    st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: #4B5563; margin: 15px 0 8px 0;'>💰 수동 자산 상태 (입력값 유지)</div>", unsafe_allow_html=True)
     total_principal_val = st.number_input("총 투자 원금 ($)", min_value=0.0, step=100.0, value=float(st.session_state.total_principal), key="sb_principal")
     if total_principal_val != st.session_state.total_principal:
         update_setting("total_principal", total_principal_val)
@@ -151,17 +158,34 @@ with st.sidebar:
         update_setting("t_value", t_val)
 
     remaining_cash = max(st.session_state.total_principal - (st.session_state.current_shares * st.session_state.avg_price), 0.0)
-    st.metric("남은 잔금", f"${remaining_cash:,.2f}")
+    
+    # 사이드바 잔금 카드형 디자인
+    st.markdown(f"""
+    <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
+        <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700;">남은 잔금</div>
+        <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">${remaining_cash:,.2f}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.divider()
-    st.markdown("#### 🌐 시장 데이터")
+    st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: #4B5563; margin-bottom: 8px;'>🌐 시장 데이터</div>", unsafe_allow_html=True)
     auto_close, auto_ma5 = fetch_market_data(st.session_state.ticker)
 
     if auto_close is not None:
         prev_close = auto_close
         ma5 = auto_ma5
-        st.metric("전일 종가", f"${prev_close:,.2f}")
-        st.metric("5일 평균가", f"${ma5:,.2f}")
+        st.markdown(f"""
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 10px;">
+                <div style="font-size: 0.7rem; color: #6B7280; font-weight: 700;">전일 종가</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #111315;">${prev_close:,.2f}</div>
+            </div>
+            <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 10px;">
+                <div style="font-size: 0.7rem; color: #6B7280; font-weight: 700;">5일 평균가</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #111315;">${ma5:,.2f}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         prev_close, ma5 = 0.0, 0.0
         st.warning("시장 데이터를 불러오지 못했습니다.")
@@ -227,7 +251,7 @@ def build_fixed_50_ladder(base_price: float, base_amount: float):
 
 
 # =================================================================================
-# 5. 메인 UI 구성 (컴포넌트 렌더링 적용)
+# 5. 메인 UI 구성 (전체 탭 디자인 통일)
 # =================================================================================
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -238,8 +262,10 @@ st.markdown(f"""
 
 tab1, tab2, tab3 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래내역 입력", "🔍 거래내역 크로스체크"])
 
+# ---------------------------------------------------------------------------------
+# [Tab 1] 오늘의 매수/매도 가이드
+# ---------------------------------------------------------------------------------
 with tab1:
-    # 1. 진행 상황 카드 박스
     q_full = math.floor(daily_buy_amount_normal / buy_point_price_normal) if buy_point_price_normal > 0 else 0
     ladder = build_fixed_50_ladder(buy_point_price_normal, daily_buy_amount_normal)
     ladder_html_items = "".join([f"<div style='font-size: 0.82rem; color: #6B7280; margin-bottom: 4px;'>- LOC ${item['price']:,.2f} × {item['qty']}주</div>" for item in ladder])
@@ -347,12 +373,44 @@ with tab1:
     """
     components.html(main_dashboard_html, height=720, scrolling=True)
 
+# ---------------------------------------------------------------------------------
+# [Tab 2] 거래내역 입력 (컴포넌트 카드 형태로 디자인 통일)
+# ---------------------------------------------------------------------------------
 with tab2:
-    st.markdown("### 거래 내역 입력")
+    history_list = st.session_state.get("trade_history", [])
     
-    with st.container(border=True):
-        st.info("📝 거래 유형 선택 및 입력 (사이드바 값에 즉시 영향 주지 않음)")
+    # 폼 카드 HTML 빌드
+    history_items_html = ""
+    if history_list:
+        for idx, item in enumerate(history_list):
+            history_items_html += f"""
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.01);">
+                <div style="font-weight: 800; color: #111315; font-size: 0.95rem; width: 50px;">#{len(history_list) - idx}</div>
+                <div style="color: #6B7280; font-size: 0.9rem; width: 100px;">{item['date']}</div>
+                <div style="font-weight: 700; color: #2563EB; font-size: 0.95rem; width: 110px;">{item['action']}</div>
+                <div style="font-weight: 700; color: #111315; font-size: 0.95rem; width: 90px;">${item['price']:,.2f}</div>
+                <div style="color: #4B5563; font-size: 0.9rem; width: 60px;">{item['shares']}주</div>
+                <div style="font-weight: 800; color: #111315; font-size: 1rem; width: 110px; text-align: right;">${item['amount']:,.2f}</div>
+            </div>
+            """
 
+    trade_input_card_html = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 24px;">
+            <div style="font-size: 1.2rem; font-weight: 800; color: #111315; margin-bottom: 6px;">거래 내역 입력</div>
+            <div style="font-size: 0.85rem; color: #6B7280; margin-bottom: 20px;">📝 거래 유형 선택 및 입력 (사이드바 값에 즉시 영향 주지 않음)</div>
+            
+            <!-- 실제 입력 컴포넌트는 Streamlit 네이티브 활용을 위해 상단에 배치되도록 하고 안내 영역 구성 -->
+        </div>
+        
+        <div style="font-size: 1.2rem; font-weight: 800; color: #111315; margin-bottom: 16px;">기록된 거래 목록</div>
+        {history_items_html if history_list else '<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; text-align: center; color: #6B7280;">기록된 거래 내역이 없습니다.</div>'}
+    </div>
+    """
+    
+    # 기능 구현을 위한 네이티브 입력 필드 유지 (디자인 결 맞춤)
+    with st.container(border=True):
+        st.markdown("#### 📝 신규 거래 기록 추가")
         col_i1, col_i2 = st.columns(2)
         trade_date = col_i1.date_input("체결 날짜", value=datetime.today())
         main_category = col_i2.radio("거래 대분류", ["매수", "매도"], horizontal=True)
@@ -419,10 +477,10 @@ with tab2:
     else:
         st.info("기록된 거래 내역이 없습니다.")
 
+# ---------------------------------------------------------------------------------
+# [Tab 3] 거래내역 크로스체크 (카드 형태로 디자인 통일)
+# ---------------------------------------------------------------------------------
 with tab3:
-    st.markdown("### 🔍 거래내역 크로스체크 및 오차 검증 센터")
-    st.markdown("왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 오차를 진단합니다.")
-    
     history_list = st.session_state.get("trade_history", [])
     calc_shares, calc_total_cost, calc_t = 0, 0.0, 0.0
     for h in history_list:
@@ -438,33 +496,38 @@ with tab3:
     diff_avg = st.session_state.avg_price - calc_avg
     diff_t = st.session_state.t_value - max(calc_t, 0.0)
 
-    c1, c2, c3 = st.columns(3)
-    
-    with c1:
-        with st.container(border=True):
-            st.markdown("**보유 주식수 비교**")
-            st.markdown(f"설정: {st.session_state.current_shares}주")
-            st.markdown(f"거래기록: {calc_shares}주")
-            status_text = f"오차 발생 ({diff_shares:+d}주)" if diff_shares != 0 else "일치함"
-            st.markdown(f"상태: **{status_text}**")
+    cross_check_html = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 24px;">
+            <h3 style="margin-top: 0; font-size: 1.3rem; color: #111315;">🔍 거래내역 크로스체크 및 오차 검증 센터</h3>
+            <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: 0;">왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 오차를 진단합니다.</p>
+        </div>
 
-    with c2:
-        with st.container(border=True):
-            st.markdown("**평균단가 비교**")
-            st.markdown(f"설정: ${st.session_state.avg_price:,.2f}")
-            st.markdown(f"거래기록: ${calc_avg:,.2f}")
-            status_text_avg = f"오차 발생 (${diff_avg:+.2f})" if abs(diff_avg) > 0.01 else "일치함"
-            st.markdown(f"상태: **{status_text_avg}**")
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">보유 주식수 비교</div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>{st.session_state.current_shares}주</b></div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>{calc_shares}주</b></div>
+                <div style="font-size: 0.9rem; color: {'#DC2626' if diff_shares != 0 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 ({diff_shares:+d}주)" if diff_shares != 0 else "일치함"}</div>
+            </div>
 
-    with c3:
-        with st.container(border=True):
-            st.markdown("**진행 회차(T값) 비교**")
-            st.markdown(f"설정: {st.session_state.t_value:g}회")
-            st.markdown(f"거래기록: {max(calc_t, 0.0):g}회")
-            status_text_t = f"오차 발생 ({diff_t:+.1f}회)" if abs(diff_t) > 0.01 else "일치함"
-            st.markdown(f"상태: **{status_text_t}**")
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">평균단가 비교</div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>${st.session_state.avg_price:,.2f}</b></div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>${calc_avg:,.2f}</b></div>
+                <div style="font-size: 0.9rem; color: {'#DC2626' if abs(diff_avg) > 0.01 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 (${diff_avg:+.2f})" if abs(diff_avg) > 0.01 else "일치함"}</div>
+            </div>
 
-    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">진행 회차(T값) 비교</div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>{st.session_state.t_value:g}회</b></div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>{max(calc_t, 0.0):g}회</b></div>
+                <div style="font-size: 0.9rem; color: {'#DC2626' if abs(diff_t) > 0.01 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 ({diff_t:+.1f}회)" if abs(diff_t) > 0.01 else "일치함"}</div>
+            </div>
+        </div>
+    </div>
+    """
+    components.html(cross_check_html, height=280, scrolling=False)
 
     if len(history_list) == 0:
         st.info("비교할 거래 내역이 없습니다.")
