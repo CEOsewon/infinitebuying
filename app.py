@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (컴포넌트 렌더링 최종 버전)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (높이 잘림 최종 해결 버전)
 =====================================================================================
 """
 
@@ -11,7 +11,6 @@ import threading
 from datetime import datetime
 from pathlib import Path
 import streamlit as st
-import streamlit.components.v1 as components
 import yfinance as yf
 
 # =================================================================================
@@ -118,7 +117,7 @@ def fetch_market_data(ticker_symbol: str):
 # 3. 사이드바 설정
 # =================================================================================
 with st.sidebar:
-    components.html("<div style='font-size: 1.1rem; font-weight: 800; color: #111315; margin-bottom: 5px; font-family: -apple-system, sans-serif;'>🚀 Road to Billionaire</div>", height=35)
+    st.markdown("<div style='font-size: 1.1rem; font-weight: 800; color: #111315; margin-bottom: 5px;'>🚀 Road to Billionaire</div>", unsafe_allow_html=True)
     st.divider()
 
     st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: #4B5563; margin-bottom: 8px;'>⚙️ 기본 설정</div>", unsafe_allow_html=True)
@@ -151,12 +150,12 @@ with st.sidebar:
 
     remaining_cash = max(st.session_state.total_principal - (st.session_state.current_shares * st.session_state.avg_price), 0.0)
     
-    components.html(f"""
-    <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; margin-top: 5px; font-family: -apple-system, sans-serif;">
+    st.markdown(f"""
+    <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
         <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700;">남은 잔금</div>
         <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">${remaining_cash:,.2f}</div>
     </div>
-    """, height=65)
+    """, unsafe_allow_html=True)
 
     st.divider()
     st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: #4B5563; margin-bottom: 8px;'>🌐 시장 데이터</div>", unsafe_allow_html=True)
@@ -165,8 +164,8 @@ with st.sidebar:
     if auto_close is not None:
         prev_close = auto_close
         ma5 = auto_ma5
-        components.html(f"""
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: -apple-system, sans-serif;">
+        st.markdown(f"""
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 10px;">
                 <div style="font-size: 0.7rem; color: #6B7280; font-weight: 700;">전일 종가</div>
                 <div style="font-size: 0.95rem; font-weight: 800; color: #111315;">${prev_close:,.2f}</div>
@@ -176,7 +175,7 @@ with st.sidebar:
                 <div style="font-size: 0.95rem; font-weight: 800; color: #111315;">${ma5:,.2f}</div>
             </div>
         </div>
-        """, height=65)
+        """, unsafe_allow_html=True)
     else:
         prev_close, ma5 = 0.0, 0.0
         st.warning("시장 데이터를 불러오지 못했습니다.")
@@ -247,12 +246,12 @@ def build_fixed_50_ladder(base_price: float, base_amount: float):
 _, main_content_col, _ = st.columns([1, 10, 1])
 
 with main_content_col:
-    components.html(f"""
-    <div style="display: flex; align-items: center; margin-bottom: 10px; font-family: -apple-system, sans-serif;">
-        <h1 style="margin: 0; font-size: 1.8rem; color: #111315;">{ticker}</h1>
+    st.markdown(f"""
+    <div style="display: flex; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0; font-size: 1.8rem;">{ticker}</h1>
         <span style="background: #DBEAFE; color: #1E40AF; font-weight: 800; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; margin-left: 8px;">Ver 4</span>
     </div>
-    """, height=50)
+    """, unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래내역 입력", "🔍 거래내역 크로스체크"])
 
@@ -277,90 +276,88 @@ with main_content_col:
         star_pct_val_str = f"{star_pct*100:.2f}%"
         target_pct_val_str = f"{target_pct*100:.0f}%"
 
-        components.html(f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px;">
-            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 1.1rem; font-weight: 800; color: #111315;">진행 상황</span>
-                    <span style="font-size: 0.95rem; font-weight: 700; color: #2563EB;">{progress_ratio*100:.1f}%</span>
-                </div>
-                <div style="background: #E5E7EB; border-radius: 999px; height: 10px; width: 100%; overflow: hidden; margin-bottom: 20px;">
-                    <div style="background: #2563EB; width: {progress_ratio*100}%; height: 100%; border-radius: 999px;"></div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">시드</div>
-                        <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">사용한 시드</div>
-                        <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
-                    </div>
-                </div>
-                
-                <div style="border-top: 1px solid #F3F4F6; padding-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">매입 금액</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">평단가</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{avg_price:,.3f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">보유 수량</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{current_shares:,} <span style="font-size: 0.75rem; color: #6B7280;">주</span></div>
-                    </div>
-                </div>
+        st.markdown(f"""
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 1.1rem; font-weight: 800; color: #111315;">진행 상황</span>
+                <span style="font-size: 0.95rem; font-weight: 700; color: #2563EB;">{progress_ratio*100:.1f}%</span>
             </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <h3 style="margin: 0; font-size: 1.4rem; color: #111315;">무한 매수법 가이드</h3>
-                <div style="display: flex; gap: 10px;">
-                    <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 8px 14px; text-align: center;">
-                        <div style="font-size: 0.7rem; color: #D97706; font-weight: 700;">T 값</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{t_value:g} 회</div>
-                    </div>
-                    <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 8px 14px; text-align: center;">
-                        <div style="font-size: 0.7rem; color: #2563EB; font-weight: 700;">Star 값</div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{star_display_str}</div>
-                    </div>
-                </div>
+            <div style="background: #E5E7EB; border-radius: 999px; height: 10px; width: 100%; overflow: hidden; margin-bottom: 20px;">
+                <div style="background: #2563EB; width: {progress_ratio*100}%; height: 100%; border-radius: 999px;"></div>
             </div>
-
-            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.01);">
-                <span style="background: #EFF6FF; color: #2563EB; padding: 6px 10px; border-radius: 8px; margin-right: 12px; font-size: 1rem;">📄</span>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                 <div>
-                    <div style="font-size: 0.7rem; color: #6B7280; font-weight: 700; letter-spacing: 0.5px;">CURRENT STATE</div>
-                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{detected_mode}</div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">시드</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">사용한 시드</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
                 </div>
             </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
-                    <h4 style="color: #DC2626; font-size: 1.1rem; margin-top: 0; margin-bottom: 18px;">매수 가이드</h4>
-                    <div style="background: #FFFDFD; border: 1px solid #FEE2E2; border-radius: 12px; padding: 18px 20px;">
-                        <div style="font-size: 0.8rem; color: #DC2626; font-weight: 700; margin-bottom: 6px;">LOC ★{star_pct_val_str}</div>
-                        <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${buy_point_price_normal:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {q_full:,}주</span></div>
-                    </div>
-                    {ladder_section}
+            
+            <div style="border-top: 1px solid #F3F4F6; padding-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">매입 금액</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
                 </div>
-
-                <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
-                    <h4 style="color: #2563EB; font-size: 1.1rem; margin-top: 0; margin-bottom: 18px;">매도 가이드</h4>
-                    <div style="background: #F8FAFC; border: 1px solid #DBEAFE; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px;">
-                        <div style="font-size: 0.8rem; color: #2563EB; font-weight: 700; margin-bottom: 6px;">LOC ★{star_pct_val_str}</div>
-                        <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${star_price_normal:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {quarter_sell_qty:,}주</span></div>
-                    </div>
-                    <div style="background: #F8FAFC; border: 1px solid #DBEAFE; border-radius: 12px; padding: 18px 20px;">
-                        <div style="font-size: 0.8rem; color: #2563EB; font-weight: 700; margin-bottom: 6px;">지정가 +{target_pct_val_str}</div>
-                        <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${target_sell_price:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {remain_sell_qty:,}주</span></div>
-                    </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">평단가</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{avg_price:,.3f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">보유 수량</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{current_shares:,} <span style="font-size: 0.75rem; color: #6B7280;">주</span></div>
                 </div>
             </div>
         </div>
-        """, height=660)
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="margin: 0; font-size: 1.4rem; color: #111315;">무한 매수법 가이드</h3>
+            <div style="display: flex; gap: 10px;">
+                <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 8px 14px; text-align: center;">
+                    <div style="font-size: 0.7rem; color: #D97706; font-weight: 700;">T 값</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{t_value:g} 회</div>
+                </div>
+                <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 8px 14px; text-align: center;">
+                    <div style="font-size: 0.7rem; color: #2563EB; font-weight: 700;">Star 값</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{star_display_str}</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.01);">
+            <span style="background: #EFF6FF; color: #2563EB; padding: 6px 10px; border-radius: 8px; margin-right: 12px; font-size: 1rem;">📄</span>
+            <div>
+                <div style="font-size: 0.7rem; color: #6B7280; font-weight: 700; letter-spacing: 0.5px;">CURRENT STATE</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{detected_mode}</div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <h4 style="color: #DC2626; font-size: 1.1rem; margin-top: 0; margin-bottom: 18px;">매수 가이드</h4>
+                <div style="background: #FFFDFD; border: 1px solid #FEE2E2; border-radius: 12px; padding: 18px 20px;">
+                    <div style="font-size: 0.8rem; color: #DC2626; font-weight: 700; margin-bottom: 6px;">LOC ★{star_pct_val_str}</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${buy_point_price_normal:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {q_full:,}주</span></div>
+                </div>
+                {ladder_section}
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <h4 style="color: #2563EB; font-size: 1.1rem; margin-top: 0; margin-bottom: 18px;">매도 가이드</h4>
+                <div style="background: #F8FAFC; border: 1px solid #DBEAFE; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px;">
+                    <div style="font-size: 0.8rem; color: #2563EB; font-weight: 700; margin-bottom: 6px;">LOC ★{star_pct_val_str}</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${star_price_normal:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {quarter_sell_qty:,}주</span></div>
+                </div>
+                <div style="background: #F8FAFC; border: 1px solid #DBEAFE; border-radius: 12px; padding: 18px 20px;">
+                    <div style="font-size: 0.8rem; color: #2563EB; font-weight: 700; margin-bottom: 6px;">지정가 +{target_pct_val_str}</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${target_sell_price:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {remain_sell_qty:,}주</span></div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # ---------------------------------------------------------------------------------
     # [Tab 2] 거래내역 입력
@@ -455,37 +452,35 @@ with main_content_col:
         diff_avg = st.session_state.avg_price - calc_avg
         diff_t = st.session_state.t_value - max(calc_t, 0.0)
 
-        components.html(f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 4px;">
-            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 24px;">
-                <h3 style="margin-top: 0; font-size: 1.3rem; color: #111315;">🔍 거래내역 크로스체크 및 오차 검증 센터</h3>
-                <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: 0;">왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 오차를 진단합니다.</p>
+        st.markdown(f"""
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 24px;">
+            <h3 style="margin-top: 0; font-size: 1.3rem; color: #111315;">🔍 거래내역 크로스체크 및 오차 검증 센터</h3>
+            <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: 0;">왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 오차를 진단합니다.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px;">
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">보유 주식수 비교</div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>{st.session_state.current_shares}주</b></div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>{calc_shares}주</b></div>
+                <div style="font-size: 0.9rem; color: {'#DC2626' if diff_shares != 0 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 ({diff_shares:+d}주)" if diff_shares != 0 else "일치함"}</div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px;">
-                <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
-                    <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">보유 주식수 비교</div>
-                    <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>{st.session_state.current_shares}주</b></div>
-                    <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>{calc_shares}주</b></div>
-                    <div style="font-size: 0.9rem; color: {'#DC2626' if diff_shares != 0 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 ({diff_shares:+d}주)" if diff_shares != 0 else "일치함"}</div>
-                </div>
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">평균단가 비교</div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>${st.session_state.avg_price:,.2f}</b></div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>${calc_avg:,.2f}</b></div>
+                <div style="font-size: 0.9rem; color: {'#DC2626' if abs(diff_avg) > 0.01 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 (${diff_avg:+.2f})" if abs(diff_avg) > 0.01 else "일치함"}</div>
+            </div>
 
-                <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
-                    <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">평균단가 비교</div>
-                    <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>${st.session_state.avg_price:,.2f}</b></div>
-                    <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>${calc_avg:,.2f}</b></div>
-                    <div style="font-size: 0.9rem; color: {'#DC2626' if abs(diff_avg) > 0.01 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 (${diff_avg:+.2f})" if abs(diff_avg) > 0.01 else "일치함"}</div>
-                </div>
-
-                <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
-                    <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">진행 회차(T값) 비교</div>
-                    <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>{st.session_state.t_value:g}회</b></div>
-                    <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>{max(calc_t, 0.0):g}회</b></div>
-                    <div style="font-size: 0.9rem; color: {'#DC2626' if abs(diff_t) > 0.01 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 ({diff_t:+.1f}회)" if abs(diff_t) > 0.01 else "일치함"}</div>
-                </div>
+            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">진행 회차(T값) 비교</div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>{st.session_state.t_value:g}회</b></div>
+                <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 8px;">거래기록: <b>{max(calc_t, 0.0):g}회</b></div>
+                <div style="font-size: 0.9rem; color: {'#DC2626' if abs(diff_t) > 0.01 else '#059669'}; font-weight: 700;">상태: {f"오차 발생 ({diff_t:+.1f}회)" if abs(diff_t) > 0.01 else "일치함"}</div>
             </div>
         </div>
-        """, height=300)
+        """, unsafe_allow_html=True)
 
         if len(history_list) == 0:
             st.info("비교할 거래 내역이 없습니다.")
