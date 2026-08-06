@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (디자인 리팩토링 버전)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (매수 가이드 통합형)
 =====================================================================================
 """
 
@@ -104,7 +104,6 @@ DEFAULT_SETTINGS = {
     "current_shares": 0,
     "avg_price": 0.0,
     "t_value": 0.0,
-    "crash_max_drop_pct": 50,
     "use_manual_market_data": False,
     "manual_prev_close": 0.0,
     "manual_ma5": 0.0,
@@ -162,7 +161,7 @@ def fetch_market_data(ticker_symbol: str):
 
 
 # =================================================================================
-# 3. 사이드바 설정 (요청 반영: 타이틀 변경 및 서브 폰트 제거)
+# 3. 사이드바 설정
 # =================================================================================
 with st.sidebar:
     st.markdown("### 🚀 Road to Billionaire")
@@ -283,11 +282,11 @@ buy_point_price_normal = star_price_normal - 0.01 if star_price_normal > 0 else 
 
 daily_buy_amount_normal = remaining_cash / (split_n - t_value) if (split_n - t_value) > 0 else 0.0
 
-def build_crash_buy_ladder(base_price: float, base_amount: float, max_drop_pct: float):
+def build_fixed_50_ladder(base_price: float, base_amount: float):
     if base_price <= 0 or base_amount <= 0:
         return []
     base_qty = math.floor(base_amount / base_price)
-    floor_price = base_price * (1 - max_drop_pct / 100)
+    floor_price = base_price * 0.5  # 하락률 50% 고정
     ladder = []
     n = base_qty + 1
     while True:
@@ -302,7 +301,7 @@ def build_crash_buy_ladder(base_price: float, base_amount: float, max_drop_pct: 
 
 
 # =================================================================================
-# 5. 메인 화면 UI 구성 (요청 반영: 티커명 + 초록색 V4.0 작은 뱃지 조합)
+# 5. 메인 화면 UI 구성
 # =================================================================================
 st.markdown(f"<h1>{ticker} <span class='badge-v4'>V4.0</span></h1>", unsafe_allow_html=True)
 
@@ -372,28 +371,18 @@ with tab1:
                     st.metric("매수 단가", f"${buy_point_price_normal:,.2f}")
                     st.metric("매수 수량", f"{q_full:,} 주")
 
-        # 요청 반영: 폭락장 대비 추가매수 메뉴를 매수 가이드 하단에 작고 진한 회색 톤으로 통합 배치
-        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        with st.container(border=True):
-            st.markdown("<span style='color: #495057; font-weight: 700; font-size: 0.95rem;'>🚨 폭락장 대비 추가매수 (사다리 주문)</span>", unsafe_allow_html=True)
-            
-            max_drop = st.slider("최대 커버 하락률 (%)", 10, 80, int(st.session_state.crash_max_drop_pct), key="slider_drop")
-            if max_drop != st.session_state.crash_max_drop_pct:
-                update_setting("crash_max_drop_pct", max_drop)
-
-            ladder = build_crash_buy_ladder(buy_point_price_normal, daily_buy_amount_normal, max_drop)
-            if ladder:
-                tot_qty = sum(i["qty"] for i in ladder)
-                tot_amt = sum(i["price"] * i["qty"] for i in ladder)
+                # 요청 반영: 매수 가이드 박스 하단에 50% 고정 8단계 사다리 주문 정보를 작은 글씨와 옅은 회색으로 통합
+                st.markdown("<div style='border-top: 1px dashed #E9ECEF; margin: 15px 0 10px 0;'></div>", unsafe_allow_html=True)
+                st.markdown("<span style='color: #868E96; font-size: 0.8rem; font-weight: 700;'>🚨 폭락장 대비 50% 하락 사다리 (8단계)</span>", unsafe_allow_html=True)
                 
-                lc1, lc2, lc3 = st.columns(3)
-                lc1.markdown(f"<span style='color: #6C757D; font-size: 0.85rem;'>사다리 단계: <b>{len(ladder)}단계</b></span>", unsafe_allow_html=True)
-                lc2.markdown(f"<span style='color: #6C757D; font-size: 0.85rem;'>총 추가수량: <b>{tot_qty:,}주</b></span>", unsafe_allow_html=True)
-                lc3.markdown(f"<span style='color: #6C757D; font-size: 0.85rem;'>필요 총예산: <b>${tot_amt:,.2f}</b></span>", unsafe_allow_html=True)
-                
-                with st.expander("📌 상세 사다리 주문 리스트 보기", expanded=False):
-                    ladder_text = "  \n".join([f"<span style='color: #495057; font-size: 0.85rem;'>- LOC **${item['price']:,.2f}** × {item['qty']}주</span>" for item in ladder])
-                    st.markdown(ladder_text, unsafe_allow_html=True)
+                ladder = build_fixed_50_ladder(buy_point_price_normal, daily_buy_amount_normal)
+                if ladder:
+                    tot_qty = sum(i["qty"] for i in ladder)
+                    tot_amt = sum(i["price"] * i["qty"] for i in ladder)
+                    st.markdown(f"<span style='color: #ADB5BD; font-size: 0.75rem;'>총 추가수량: <b>{tot_qty:,}주</b> | 필요 예산: <b>${tot_amt:,.2f}</b></span>", unsafe_allow_html=True)
+                    
+                    ladder_lines = " | ".join([f"<span style='color: #ADB5BD; font-size: 0.75rem;'><b>${item['price']:,.2f}</b>({item['qty']}주)</span>" for item in ladder])
+                    st.markdown(f"<div style='margin-top: 4px; line-height: 1.4;'>{ladder_lines}</div>", unsafe_allow_html=True)
 
     else:
         st.info(f"현재 **{detected_mode}** 상태입니다. 안내에 따라 리버스 모드 매매를 진행하세요.")
