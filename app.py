@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (전체 디자인 통일 버전)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (디테일 수정 완료 버전)
 =====================================================================================
 """
 
@@ -15,17 +15,19 @@ import streamlit.components.v1 as components
 import yfinance as yf
 
 # =================================================================================
-# 0. 페이지 설정 및 디자인 CSS
+# 0. 페이지 설정 및 디자인 CSS (좌우 폭 축소 반영)
 # =================================================================================
-st.set_page_config(page_title="무한매수법 V4.0 대시보드", layout="wide", page_icon="🔥")
+st.set_page_config(page_title="무한매수법 V4.0 대시보드", page_icon="🔥")
 
 CUSTOM_UI_CSS = """
 <style>
     .stApp { background-color: #F8F9FA; color: #212529; }
     
-    /* 사이드바 스타일 모던하게 정돈 */
+    /* 사이드바 스타일 모던하게 정돈 및 접기 아이콘 충돌 방지 */
     section[data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E5E7EB; padding-top: 10px; }
     section[data-testid="stSidebar"] * { color: #212529 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] { display: none; }
+    
     section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"], 
     section[data-testid="stSidebar"] div[data-testid="stNumberInput"] input {
         background-color: #FAFAFA !important;
@@ -123,7 +125,7 @@ def fetch_market_data(ticker_symbol: str):
 
 
 # =================================================================================
-# 3. 사이드바 설정 (디자인 통일)
+# 3. 사이드바 설정
 # =================================================================================
 with st.sidebar:
     st.markdown("<div style='font-size: 1.1rem; font-weight: 800; color: #111315; margin-bottom: 5px;'>🚀 Road to Billionaire</div>", unsafe_allow_html=True)
@@ -159,7 +161,6 @@ with st.sidebar:
 
     remaining_cash = max(st.session_state.total_principal - (st.session_state.current_shares * st.session_state.avg_price), 0.0)
     
-    # 사이드바 잔금 카드형 디자인
     st.markdown(f"""
     <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
         <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700;">남은 잔금</div>
@@ -251,7 +252,7 @@ def build_fixed_50_ladder(base_price: float, base_amount: float):
 
 
 # =================================================================================
-# 5. 메인 UI 구성 (전체 탭 디자인 통일)
+# 5. 메인 UI 구성
 # =================================================================================
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -374,41 +375,11 @@ with tab1:
     components.html(main_dashboard_html, height=720, scrolling=True)
 
 # ---------------------------------------------------------------------------------
-# [Tab 2] 거래내역 입력 (컴포넌트 카드 형태로 디자인 통일)
+# [Tab 2] 거래내역 입력
 # ---------------------------------------------------------------------------------
 with tab2:
     history_list = st.session_state.get("trade_history", [])
     
-    # 폼 카드 HTML 빌드
-    history_items_html = ""
-    if history_list:
-        for idx, item in enumerate(history_list):
-            history_items_html += f"""
-            <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.01);">
-                <div style="font-weight: 800; color: #111315; font-size: 0.95rem; width: 50px;">#{len(history_list) - idx}</div>
-                <div style="color: #6B7280; font-size: 0.9rem; width: 100px;">{item['date']}</div>
-                <div style="font-weight: 700; color: #2563EB; font-size: 0.95rem; width: 110px;">{item['action']}</div>
-                <div style="font-weight: 700; color: #111315; font-size: 0.95rem; width: 90px;">${item['price']:,.2f}</div>
-                <div style="color: #4B5563; font-size: 0.9rem; width: 60px;">{item['shares']}주</div>
-                <div style="font-weight: 800; color: #111315; font-size: 1rem; width: 110px; text-align: right;">${item['amount']:,.2f}</div>
-            </div>
-            """
-
-    trade_input_card_html = f"""
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 24px;">
-            <div style="font-size: 1.2rem; font-weight: 800; color: #111315; margin-bottom: 6px;">거래 내역 입력</div>
-            <div style="font-size: 0.85rem; color: #6B7280; margin-bottom: 20px;">📝 거래 유형 선택 및 입력 (사이드바 값에 즉시 영향 주지 않음)</div>
-            
-            <!-- 실제 입력 컴포넌트는 Streamlit 네이티브 활용을 위해 상단에 배치되도록 하고 안내 영역 구성 -->
-        </div>
-        
-        <div style="font-size: 1.2rem; font-weight: 800; color: #111315; margin-bottom: 16px;">기록된 거래 목록</div>
-        {history_items_html if history_list else '<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; text-align: center; color: #6B7280;">기록된 거래 내역이 없습니다.</div>'}
-    </div>
-    """
-    
-    # 기능 구현을 위한 네이티브 입력 필드 유지 (디자인 결 맞춤)
     with st.container(border=True):
         st.markdown("#### 📝 신규 거래 기록 추가")
         col_i1, col_i2 = st.columns(2)
@@ -478,7 +449,7 @@ with tab2:
         st.info("기록된 거래 내역이 없습니다.")
 
 # ---------------------------------------------------------------------------------
-# [Tab 3] 거래내역 크로스체크 (카드 형태로 디자인 통일)
+# [Tab 3] 거래내역 크로스체크 (하단 잘림 방지 높이 최적화)
 # ---------------------------------------------------------------------------------
 with tab3:
     history_list = st.session_state.get("trade_history", [])
@@ -497,13 +468,13 @@ with tab3:
     diff_t = st.session_state.t_value - max(calc_t, 0.0)
 
     cross_check_html = f"""
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 10px;">
         <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 24px;">
             <h3 style="margin-top: 0; font-size: 1.3rem; color: #111315;">🔍 거래내역 크로스체크 및 오차 검증 센터</h3>
             <p style="color: #6B7280; font-size: 0.9rem; margin-bottom: 0;">왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 오차를 진단합니다.</p>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 10px;">
             <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
                 <div style="font-weight: 800; color: #111315; font-size: 1.05rem; margin-bottom: 12px;">보유 주식수 비교</div>
                 <div style="font-size: 0.9rem; color: #4B5563; margin-bottom: 4px;">설정: <b>{st.session_state.current_shares}주</b></div>
@@ -527,7 +498,7 @@ with tab3:
         </div>
     </div>
     """
-    components.html(cross_check_html, height=280, scrolling=False)
+    components.html(cross_check_html, height=330, scrolling=False)
 
     if len(history_list) == 0:
         st.info("비교할 거래 내역이 없습니다.")
