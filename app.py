@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (최종 UI 개선 버전)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (스크린샷 레이아웃 최종 버전)
 =====================================================================================
 """
 
@@ -24,22 +24,21 @@ CUSTOM_UI_CSS = """
     section[data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E9ECEF; }
     section[data-testid="stSidebar"] * { color: #212529 !important; }
     h1, h2, h3, h4 { color: #111315; font-weight: 800; }
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #FFFFFF; border-radius: 16px !important;
-        border: 1px solid #E5E7EB !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
-    }
+    
     input, div[data-testid="stNumberInput"] input, div[data-baseweb="select"] > div {
         border: 1px solid #CED4DA !important; border-radius: 8px !important;
     }
     div[data-testid="stMetric"] {
         background-color: #F8F9FA; border-radius: 10px; padding: 10px 14px; border: 1px solid #E9ECEF;
     }
-    [data-testid="stMetricValue"] { font-size: 1.3rem; font-weight: 800; color: #111315; }
-    [data-testid="stMetricLabel"] { font-size: 0.8rem; color: #6C757D; font-weight: 600; }
+    [data-testid="stMetricValue"] { font-size: 1.2rem; font-weight: 800; color: #111315; }
+    [data-testid="stMetricLabel"] { font-size: 0.75rem; color: #6C757D; font-weight: 600; }
+    
     .stTabs [data-baseweb="tab"] { font-weight: 700; font-size: 1rem; color: #4B5563; }
     .stTabs [aria-selected="true"] { color: #2563EB !important; }
     .stTabs [data-baseweb="tab-highlight"] { background-color: #2563EB !important; }
-    .badge-v4 { display: inline-block; background: #DCFCE7; color: #166534; font-weight: 800; border-radius: 6px; padding: 3px 8px; font-size: 0.8rem; border: 1px solid #BBF7D0; vertical-align: middle; margin-left: 8px; }
+    
+    .badge-v4 { display: inline-block; background: #DBEAFE; color: #1E40AF; font-weight: 800; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; vertical-align: middle; margin-left: 6px; }
     
     /* 파스텔 그린 커스텀 버튼 */
     .stButton button[kind="primary"] {
@@ -64,12 +63,12 @@ DATA_PATH = Path(__file__).parent / "user_settings.json"
 _FILE_LOCK = threading.Lock()
 
 DEFAULT_SETTINGS = {
-    "ticker": "TQQQ",
+    "ticker": "SOXL",
     "split_n": 20,
-    "total_principal": 10000.0,
-    "current_shares": 0,
-    "avg_price": 0.0,
-    "t_value": 0.0,
+    "total_principal": 30000.0,
+    "current_shares": 117,
+    "avg_price": 154.07,
+    "t_value": 29.5,
     "trade_history": [],
 }
 
@@ -125,14 +124,14 @@ def fetch_market_data(ticker_symbol: str):
 
 
 # =================================================================================
-# 3. 사이드바 설정
+# 3. 사이드바 설정 (크로스체크 기능 포함)
 # =================================================================================
 with st.sidebar:
     st.markdown("### 🚀 Road to Billionaire")
     st.divider()
 
     st.markdown("#### ⚙️ 기본 설정")
-    ticker_val = st.selectbox("종목 선택", ["TQQQ", "SOXL"], index=0 if st.session_state.ticker == "TQQQ" else 1, key="sb_ticker")
+    ticker_val = st.selectbox("종목 선택", ["SOXL", "TQQQ"], index=0 if st.session_state.ticker == "SOXL" else 1, key="sb_ticker")
     if ticker_val != st.session_state.ticker:
         update_setting("ticker", ticker_val)
         st.rerun()
@@ -142,7 +141,7 @@ with st.sidebar:
         update_setting("split_n", split_n_val)
         st.rerun()
 
-    st.markdown("#### 💰 자산 상태")
+    st.markdown("#### 💰 수동 자산 상태 (입력값 유지)")
     total_principal_val = st.number_input("총 투자 원금 ($)", min_value=0.0, step=100.0, value=float(st.session_state.total_principal), key="sb_principal")
     if total_principal_val != st.session_state.total_principal:
         update_setting("total_principal", total_principal_val)
@@ -162,6 +161,33 @@ with st.sidebar:
     remaining_cash = max(st.session_state.total_principal - (st.session_state.current_shares * st.session_state.avg_price), 0.0)
     st.metric("남은 잔금", f"${remaining_cash:,.2f}")
 
+    # 거래내역 기반 자동 계산값 산출 (크로스체크용)
+    history_list = st.session_state.get("trade_history", [])
+    calc_shares, calc_total_cost, calc_t = 0, 0.0, 0.0
+    for h in history_list:
+        calc_t += h["t_impact"]
+        if "매수" in h["action"]:
+            calc_shares += h["shares"]
+            calc_total_cost += h["amount"]
+        elif "매도" in h["action"] or "전량" in h["action"]:
+            calc_shares = max(calc_shares - h["shares"], 0)
+    calc_avg = (calc_total_cost / calc_shares) if calc_shares > 0 else 0.0
+
+    st.divider()
+    st.markdown("#### 🔍 거래내역 크로스체크")
+    st.markdown(f"<div style='font-size:0.8rem; color:#6B7280; margin-bottom:8px;'>입력값과 거래기록 누적값을 비교합니다.</div>", unsafe_allow_html=True)
+    st.markdown(f"- **기록된 거래 건수**: {len(history_list)}건")
+    st.markdown(f"- **거래기록상 주식수**: {calc_shares}주 (현재 설정: {st.session_state.current_shares}주)")
+    st.markdown(f"- **거래기록상 평단가**: ${calc_avg:,.2f} (현재 설정: ${st.session_state.avg_price:,.2f})")
+    st.markdown(f"- **거래기록상 T값**: {calc_t:g} (현재 설정: {st.session_state.t_value:g})")
+
+    if len(history_list) > 0 and (calc_shares != st.session_state.current_shares or abs(calc_avg - st.session_state.avg_price) > 0.01):
+        if st.button("🔄 거래내역 값으로 사이드바 동기화", use_container_width=True):
+            update_setting("current_shares", calc_shares)
+            update_setting("avg_price", round(calc_avg, 2))
+            update_setting("t_value", round(max(calc_t, 0.0), 2))
+            st.rerun()
+
     st.divider()
     st.markdown("#### 🌐 시장 데이터")
     auto_close, auto_ma5 = fetch_market_data(st.session_state.ticker)
@@ -171,7 +197,6 @@ with st.sidebar:
         ma5 = auto_ma5
         st.metric("전일 종가", f"${prev_close:,.2f}")
         st.metric("5일 평균가", f"${ma5:,.2f}")
-        st.success("야후 파이낸스 연동 완료")
     else:
         prev_close, ma5 = 0.0, 0.0
         st.warning("시장 데이터를 불러오지 못했습니다.")
@@ -185,6 +210,7 @@ split_n = st.session_state.split_n
 t_value = st.session_state.t_value
 avg_price = st.session_state.avg_price
 current_shares = st.session_state.current_shares
+total_principal = st.session_state.total_principal
 half_split = split_n / 2
 
 target_pct = 0.15 if ticker == "TQQQ" else 0.20
@@ -211,7 +237,10 @@ star_pct = get_star_percent(ticker, split_n, t_value)
 star_price_normal = avg_price * (1 + star_pct) if avg_price > 0 else 0.0
 buy_point_price_normal = star_price_normal - 0.01 if star_price_normal > 0 else 0.0
 
-remaining_cash_calc = max(st.session_state.total_principal - (current_shares * avg_price), 0.0)
+used_amount_calc = current_shares * avg_price
+progress_ratio = min(used_amount_calc / total_principal, 1.0) if total_principal > 0 else 0.0
+
+remaining_cash_calc = max(total_principal - used_amount_calc, 0.0)
 daily_buy_amount_normal = remaining_cash_calc / (split_n - t_value) if (split_n - t_value) > 0 else 0.0
 
 def build_fixed_50_ladder(base_price: float, base_amount: float):
@@ -233,51 +262,92 @@ def build_fixed_50_ladder(base_price: float, base_amount: float):
 
 
 # =================================================================================
-# 5. 메인 UI 구성
+# 5. 메인 UI 구성 (스크린샷 레이아웃 반영)
 # =================================================================================
-st.markdown(f"<h1>{ticker} <span class='badge-v4'>V4.0</span></h1>", unsafe_allow_html=True)
+st.markdown(f"""
+<div style="display: flex; align-items: center; margin-bottom: 20px;">
+    <h1 style="margin: 0; font-size: 1.8rem;">{ticker}</h1>
+    <span class='badge-v4'>Ver 4</span>
+</div>
+""", unsafe_allow_html=True)
 
 tab1, tab2 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래내역 입력"])
 
 with tab1:
-    # 1. 최상단 진행률 바 (가장 가시성 있게 배치)
-    with st.container(border=True):
-        progress_ratio = min(t_value / split_n, 1.0) if split_n > 0 else 0.0
-        st.progress(progress_ratio, text=f"🔥 전체 분할 진행률: {progress_ratio*100:.1f}% (T = {t_value:g} / {split_n}분할)")
+    # 1. 스크린샷 스타일 진행 상황 카드 박스
+    st.markdown(f"""
+    <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 1.1rem; font-weight: 800; color: #111315;">진행 상황</span>
+            <span style="font-size: 0.95rem; font-weight: 700; color: #2563EB;">{progress_ratio*100:.1f}%</span>
+        </div>
+        <div style="background: #E5E7EB; border-radius: 999px; height: 10px; width: 100%; overflow: hidden; margin-bottom: 20px;">
+            <div style="background: #2563EB; width: {progress_ratio*100}%; height: 100%; border-radius: 999px;"></div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">시드</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">사용한 시드</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+            </div>
+        </div>
+        
+        <div style="border-top: 1px solid #F3F4F6; padding-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            <div>
+                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">매입 금액</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">평단가</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{avg_price:,.3f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">보유 수량</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{current_shares:,} <span style="font-size: 0.75rem; color: #6B7280;">주</span></div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 2. 무한 매수법 가이드 메인 박스
+    col_guide_title, col_t_badge, col_star_badge = st.columns([2, 1, 1])
+    
+    with col_guide_title:
+        st.markdown("<h3 style='margin-top: 10px; font-size: 1.4rem;'>무한 매수법 가이드</h3>", unsafe_allow_html=True)
+    with col_t_badge:
+        st.markdown(f"""
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 0.7rem; color: #D97706; font-weight: 700;">T 값</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{t_value:g} <span style="font-size: 0.75rem;">회</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_star_badge:
+        star_display = f"{star_pct*100:.2f}%" if stage_type in ("A", "B") else "—"
+        st.markdown(f"""
+        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 14px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 0.7rem; color: #2563EB; font-weight: 700;">Star 값</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{star_display}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("<div style='margin: 10px 0;'></div>", unsafe_allow_html=True)
 
-    # 2. 상태 정보 카드 (동일한 높이와 패딩으로 정렬)
-    top_col1, top_col2, top_col3 = st.columns(3)
-    
-    with top_col1:
-        st.markdown(f"""
-        <div style="background: #FFFFFF; padding: 16px 20px; border-radius: 14px; border: 1px solid #E5E7EB; text-align: center; height: 85px; display: flex; flex-direction: column; justify-content: center;">
-            <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; letter-spacing: 0.5px;">CURRENT STATE</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #111315; margin-top: 4px;">{detected_mode}</div>
+    # Current State 표시
+    st.markdown(f"""
+    <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.01);">
+        <span style="background: #EFF6FF; color: #2563EB; padding: 6px 10px; border-radius: 8px; margin-right: 12px; font-size: 1rem;">📄</span>
+        <div>
+            <div style="font-size: 0.7rem; color: #6B7280; font-weight: 700; letter-spacing: 0.5px;">CURRENT STATE</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{detected_mode}</div>
         </div>
-        """, unsafe_allow_html=True)
-        
-    with top_col2:
-        st.markdown(f"""
-        <div style="background: #FFFFFF; padding: 16px 20px; border-radius: 14px; border: 1px solid #E5E7EB; text-align: center; height: 85px; display: flex; flex-direction: column; justify-content: center;">
-            <div style="font-size: 0.75rem; color: #D97706; font-weight: 700;">T 값</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #111315; margin-top: 4px;">{t_value:g} <span style="font-size: 0.8rem; font-weight: 600;">회</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with top_col3:
-        star_display = f"{star_pct*100:.2f}%" if stage_type in ("A", "B") else "—"
-        st.markdown(f"""
-        <div style="background: #FFFFFF; padding: 16px 20px; border-radius: 14px; border: 1px solid #E5E7EB; text-align: center; height: 85px; display: flex; flex-direction: column; justify-content: center;">
-            <div style="font-size: 0.75rem; color: #2563EB; font-weight: 700;">STAR 값</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #111315; margin-top: 4px;">{star_display}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("<div style='margin: 14px 0;'></div>", unsafe_allow_html=True)
-
-    # 3. 매수/매도 가이드 영역 (완전 독립된 CSS 박스로 선 겹침 원천 차단)
+    # 3. 매수 / 매도 가이드 그리드 박스
     col_g1, col_g2 = st.columns(2)
 
     with col_g1:
@@ -329,14 +399,13 @@ with tab2:
     with st.container(border=True):
         st.markdown("""
         <div style="background-color: #F0F7FF; padding: 10px 14px; border-radius: 8px; border: 1px solid #D0E3FF; margin-bottom: 15px;">
-            <span style="color: #1D4ED8; font-weight: 700; font-size: 0.9rem;">📝 거래 유형 선택 및 입력</span>
+            <span style="color: #1D4ED8; font-weight: 700; font-size: 0.9rem;">📝 거래 유형 선택 및 입력 (사이드바 값에 즉시 영향 주지 않음)</span>
         </div>
         """, unsafe_allow_html=True)
 
         col_i1, col_i2 = st.columns(2)
         trade_date = col_i1.date_input("체결 날짜", value=datetime.today())
         
-        # 큰 갈래 (매수 / 매도) 선택 후 상세 옵션 연동
         main_category = col_i2.radio("거래 대분류", ["매수", "매도"], horizontal=True)
         
         if main_category == "매수":
@@ -359,7 +428,7 @@ with tab2:
         exec_price = col_i3.number_input("체결가 ($)", min_value=0.0, step=0.01, value=100.0, format="%.2f")
         exec_shares = col_i4.number_input("수량 (주)", min_value=1, step=1, value=1)
 
-        if st.button("➕ 거래 내역 추가 및 반영", type="primary", use_container_width=True):
+        if st.button("➕ 거래 내역 추가", type="primary", use_container_width=True):
             history_list = st.session_state.get("trade_history", [])
             new_record = {
                 "id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
@@ -372,21 +441,7 @@ with tab2:
             }
             history_list.insert(0, new_record)
             update_setting("trade_history", history_list)
-
-            recalc_shares, recalc_total_cost, recalc_t = 0, 0.0, 0.0
-            for h in history_list:
-                recalc_t += h["t_impact"]
-                if "매수" in h["action"]:
-                    recalc_shares += h["shares"]
-                    recalc_total_cost += h["amount"]
-                elif "매도" in h["action"] or "전량" in h["action"]:
-                    recalc_shares = max(recalc_shares - h["shares"], 0)
-            recalc_avg_price = (recalc_total_cost / recalc_shares) if recalc_shares > 0 else 0.0
-
-            update_setting("current_shares", recalc_shares)
-            update_setting("avg_price", round(recalc_avg_price, 2))
-            update_setting("t_value", round(max(recalc_t, 0.0), 2))
-            st.success("반영 완료!")
+            st.success("거래 내역이 기록되었습니다! (사이드바 크로스체크 패널에서 비교 및 동기화 가능)")
             st.rerun()
 
     # 거래 내역 표
@@ -394,11 +449,8 @@ with tab2:
     history_list = st.session_state.get("trade_history", [])
     
     if history_list:
-        if st.button("🗑️ 전체 초기화"):
+        if st.button("🗑️ 전체 거래기록 초기화"):
             update_setting("trade_history", [])
-            update_setting("current_shares", 0)
-            update_setting("avg_price", 0.0)
-            update_setting("t_value", 0.0)
             st.rerun()
 
         th1, th2, th3, th4, th5, th6 = st.columns([1, 1.5, 1.8, 1.5, 1, 1.2])
@@ -429,20 +481,6 @@ with tab2:
             if sub_col_del.button("✕", key=f"del_{item['id']}_{idx}"):
                 history_list.pop(idx)
                 update_setting("trade_history", history_list)
-                
-                recalc_shares, recalc_total_cost, recalc_t = 0, 0.0, 0.0
-                for h in history_list:
-                    recalc_t += h["t_impact"]
-                    if "매수" in h["action"]:
-                        recalc_shares += h["shares"]
-                        recalc_total_cost += h["amount"]
-                    elif "매도" in h["action"] or "전량" in h["action"]:
-                        recalc_shares = max(recalc_shares - h["shares"], 0)
-                recalc_avg_price = (recalc_total_cost / recalc_shares) if recalc_shares > 0 else 0.0
-
-                update_setting("current_shares", recalc_shares)
-                update_setting("avg_price", round(recalc_avg_price, 2))
-                update_setting("t_value", round(max(recalc_t, 0.0), 2))
                 st.rerun()
                 
             st.markdown("<div style='border-bottom: 1px solid #F3F4F6; margin: 6px 0;'></div>", unsafe_allow_html=True)
