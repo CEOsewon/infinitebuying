@@ -1,10 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (사용자 친화적 라이트 테마)
-=====================================================================================
-- 야후 파이낸스 실시간 데이터 연동 (전일 종가 및 5일 이동평균 자동 계산)
-- T값 및 조건에 따른 모드 자동 추측 (전반전 / 후반전 / 리버스 첫째날 / 리버스 N일차)
-- 깔끔하고 가시성 높은 화이트 기반 UI / 자동 저장 지원
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (디자인 리팩토링 버전)
 =====================================================================================
 """
 
@@ -17,7 +13,7 @@ import streamlit as st
 import yfinance as yf
 
 # =================================================================================
-# 0. 페이지 설정 및 깔끔한 라이트 테마 CSS
+# 0. 페이지 설정 및 깔끔한 라이트 테마 & 입력창 테두리 CSS
 # =================================================================================
 st.set_page_config(page_title="무한매수법 V4.0 대시보드", layout="wide", page_icon="🔥")
 
@@ -26,7 +22,7 @@ CLEAN_LIGHT_CSS = """
     /* 전체 배경 톤 */
     .stApp { background-color: #F8F9FA; color: #212529; }
 
-    /* 사이드바 스타일링 (밝고 깔끔하게) */
+    /* 사이드바 스타일링 */
     section[data-testid="stSidebar"] {
         background-color: #FFFFFF;
         border-right: 1px solid #E9ECEF;
@@ -36,41 +32,59 @@ CLEAN_LIGHT_CSS = """
     /* 헤더 및 텍스트 */
     h1, h2, h3, h4 { color: #111315; font-weight: 800; }
 
-    /* 카드 박스 감싸기 */
+    /* 카드 박스 테두리 명확하게 (연그레이 #CED4DA) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #FFFFFF;
-        border-radius: 16px !important;
-        border: 1px solid #EAECEF !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        border-radius: 14px !important;
+        border: 1px solid #CED4DA !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    /* 사이드바 및 메인 입력창(Number Input 등) 테두리 가시성 확보 */
+    input {
+        border: 1px solid #CED4DA !important;
+        border-radius: 8px !important;
+    }
+    div[data-testid="stNumberInput"] input {
+        border: 1px solid #CED4DA !important;
+    }
+    div[data-baseweb="select"] > div {
+        border: 1px solid #CED4DA !important;
+        border-radius: 8px !important;
     }
 
     /* 메트릭 박스 커스텀 */
     div[data-testid="stMetric"] {
         background-color: #F8F9FA;
-        border-radius: 12px;
-        padding: 12px 16px;
-        border: 1px solid #F1F3F5;
+        border-radius: 10px;
+        padding: 10px 14px;
+        border: 1px solid #E9ECEF;
     }
-    [data-testid="stMetricValue"] { font-size: 1.5rem; font-weight: 800; color: #111315; }
-    [data-testid="stMetricLabel"] { font-size: 0.85rem; color: #6C757D; font-weight: 600; }
+    [data-testid="stMetricValue"] { font-size: 1.4rem; font-weight: 800; color: #111315; }
+    [data-testid="stMetricLabel"] { font-size: 0.82rem; color: #6C757D; font-weight: 600; }
 
     /* 탭 스타일 */
-    .stTabs [data-baseweb="tab"] { font-weight: 700; font-size: 1rem; color: #495057; }
+    .stTabs [data-baseweb="tab"] { font-weight: 700; font-size: 0.95rem; color: #495057; }
     .stTabs [aria-selected="true"] { color: #2563EB !important; }
     .stTabs [data-baseweb="tab-highlight"] { background-color: #2563EB !important; }
 
     /* 배지 스타일 */
+    .badge-v4 {
+        display: inline-block; background: #DCFCE7; color: #166534; font-weight: 800;
+        border-radius: 6px; padding: 3px 8px; font-size: 0.8rem; border: 1px solid #BBF7D0;
+        vertical-align: middle; margin-left: 8px;
+    }
     .badge-orange {
         display: inline-block; background: #FFF4ED; color: #C2410C; font-weight: 800;
-        border-radius: 8px; padding: 6px 12px; font-size: 0.9rem; border: 1px solid #FFEDD5;
+        border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; border: 1px solid #FFEDD5;
     }
     .badge-purple {
         display: inline-block; background: #F3E8FF; color: #7E22CE; font-weight: 800;
-        border-radius: 8px; padding: 6px 12px; font-size: 0.9rem; border: 1px solid #E9D5FF;
+        border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; border: 1px solid #E9D5FF;
     }
     .badge-blue {
         display: inline-block; background: #EFF6FF; color: #1D4ED8; font-weight: 800;
-        border-radius: 8px; padding: 6px 12px; font-size: 0.9rem; border: 1px solid #DBEAFE;
+        border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; border: 1px solid #DBEAFE;
     }
 </style>
 """
@@ -133,7 +147,7 @@ def update_setting(key, value):
 # =================================================================================
 # 2. 야후 파이낸스 데이터 자동 로드 함수
 # =================================================================================
-@st.cache_data(ttl=600)  # 10분 캐싱
+@st.cache_data(ttl=600)
 def fetch_market_data(ticker_symbol: str):
     try:
         tk = yf.Ticker(ticker_symbol)
@@ -148,11 +162,10 @@ def fetch_market_data(ticker_symbol: str):
 
 
 # =================================================================================
-# 3. 사이드바 - 사용자 설정 (자동 저장 연동)
+# 3. 사이드바 설정 (요청 반영: 타이틀 변경 및 서브 폰트 제거)
 # =================================================================================
 with st.sidebar:
-    st.markdown("### 🔥 무한매수법 V4.0")
-    st.caption("사용자 친화적 개인 대시보드")
+    st.markdown("### 🚀 Road to Billionaire")
     st.divider()
 
     st.markdown("#### ⚙️ 기본 설정")
@@ -208,7 +221,7 @@ with st.sidebar:
     st.metric("남은 잔금 (자동계산)", f"${remaining_cash:,.2f}")
 
     st.divider()
-    st.markdown("#### 🌐 시장 데이터 (야후 파이낸스)")
+    st.markdown("#### 🌐 시장 데이터")
     auto_close, auto_ma5 = fetch_market_data(st.session_state.ticker)
 
     use_manual = st.checkbox("수동으로 가격 입력하기", value=st.session_state.use_manual_market_data, key="sb_use_manual")
@@ -236,7 +249,7 @@ with st.sidebar:
 
 
 # =================================================================================
-# 4. 모드 자동 추측 로직 (T값 및 조건 기반)
+# 4. 모드 추측 및 계산 로직
 # =================================================================================
 ticker = st.session_state.ticker
 split_n = st.session_state.split_n
@@ -247,32 +260,17 @@ half_split = split_n / 2
 target_pct = 0.15 if ticker == "TQQQ" else 0.20
 reverse_exit_price = avg_price * (1 - target_pct)
 
-# 자동 모드 추측 판별
 if t_value >= split_n - 1:
-    # 리버스 모드 진입 조건 충족
     if prev_close > 0 and prev_close > reverse_exit_price:
-        detected_mode = "일반모드 - 후반전 (리버스 조건이나 종가 회복)"
-        stage_type = "B"
-    else:
-        # 리버스 모드 내부 판별 (예시로 첫째날 혹은 N일차 자동 분류)
-        if t_value >= split_n:
-            detected_mode = "리버스 모드 - 진입 N일차"
-            stage_type = "D"
-        else:
-            detected_mode = "리버스 모드 - 첫째날"
-            stage_type = "C"
-else:
-    if t_value < half_split:
-        detected_mode = "일반모드 - 전반전"
-        stage_type = "A"
-    else:
         detected_mode = "일반모드 - 후반전"
         stage_type = "B"
+    else:
+        stage_type = "D" if t_value >= split_n else "C"
+        detected_mode = "리버스모드"
+else:
+    stage_type = "A" if t_value < half_split else "B"
+    detected_mode = "일반모드 - 전반전" if t_value < half_split else "일반모드 - 후반전"
 
-
-# =================================================================================
-# 5. 계산 핵심 함수들
-# =================================================================================
 def get_star_percent(ticker: str, split_n: int, t: float) -> float:
     if ticker == "TQQQ":
         return (15 - 1.5 * t) / 100 if split_n == 20 else (15 - 0.75 * t) / 100
@@ -284,7 +282,6 @@ star_price_normal = avg_price * (1 + star_pct) if avg_price > 0 else 0.0
 buy_point_price_normal = star_price_normal - 0.01 if star_price_normal > 0 else 0.0
 
 daily_buy_amount_normal = remaining_cash / (split_n - t_value) if (split_n - t_value) > 0 else 0.0
-daily_buy_amount_reverse = remaining_cash / 4
 
 def build_crash_buy_ladder(base_price: float, base_amount: float, max_drop_pct: float):
     if base_price <= 0 or base_amount <= 0:
@@ -305,9 +302,9 @@ def build_crash_buy_ladder(base_price: float, base_amount: float, max_drop_pct: 
 
 
 # =================================================================================
-# 6. 메인 화면 UI 구성
+# 5. 메인 화면 UI 구성 (요청 반영: 티커명 + 초록색 V4.0 작은 뱃지 조합)
 # =================================================================================
-st.title(f"🔥 {ticker} 무한매수법 V4.0 대시보드")
+st.markdown(f"<h1>{ticker} <span class='badge-v4'>V4.0</span></h1>", unsafe_allow_html=True)
 
 # 상단 요약 카드 (진행 상황)
 with st.container(border=True):
@@ -332,7 +329,7 @@ with st.container(border=True):
         st.markdown(f"<span class='badge-purple'>Star값 {star_display}</span> &nbsp; <span class='badge-blue'>{detected_mode}</span>", unsafe_allow_html=True)
 
 
-# 탭 구성: 주문 가이드 / 빠른 체결 입력
+# 탭 구성
 tab1, tab2 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래 내역 빠른 입력"])
 
 with tab1:
@@ -375,10 +372,11 @@ with tab1:
                     st.metric("매수 단가", f"${buy_point_price_normal:,.2f}")
                     st.metric("매수 수량", f"{q_full:,} 주")
 
-        # 폭락장 대비 추가매수 사다리 섹션
-        st.markdown("###")
+        # 요청 반영: 폭락장 대비 추가매수 메뉴를 매수 가이드 하단에 작고 진한 회색 톤으로 통합 배치
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         with st.container(border=True):
-            st.markdown("#### 🚨 폭락장 대비 추가매수 (사다리 주문)")
+            st.markdown("<span style='color: #495057; font-weight: 700; font-size: 0.95rem;'>🚨 폭락장 대비 추가매수 (사다리 주문)</span>", unsafe_allow_html=True)
+            
             max_drop = st.slider("최대 커버 하락률 (%)", 10, 80, int(st.session_state.crash_max_drop_pct), key="slider_drop")
             if max_drop != st.session_state.crash_max_drop_pct:
                 update_setting("crash_max_drop_pct", max_drop)
@@ -387,13 +385,15 @@ with tab1:
             if ladder:
                 tot_qty = sum(i["qty"] for i in ladder)
                 tot_amt = sum(i["price"] * i["qty"] for i in ladder)
-                lc1, lc2, lc3 = st.columns(3)
-                lc1.metric("사다리 단계", f"{len(ladder)}단계")
-                lc2.metric("총 추가수량", f"{tot_qty:,}주")
-                lc3.metric("필요 총예산", f"${tot_amt:,.2f}")
                 
-                ladder_text = "  \n".join([f"- LOC **${item['price']:,.2f}** × {item['qty']}주" for item in ladder])
-                st.markdown(ladder_text)
+                lc1, lc2, lc3 = st.columns(3)
+                lc1.markdown(f"<span style='color: #6C757D; font-size: 0.85rem;'>사다리 단계: <b>{len(ladder)}단계</b></span>", unsafe_allow_html=True)
+                lc2.markdown(f"<span style='color: #6C757D; font-size: 0.85rem;'>총 추가수량: <b>{tot_qty:,}주</b></span>", unsafe_allow_html=True)
+                lc3.markdown(f"<span style='color: #6C757D; font-size: 0.85rem;'>필요 총예산: <b>${tot_amt:,.2f}</b></span>", unsafe_allow_html=True)
+                
+                with st.expander("📌 상세 사다리 주문 리스트 보기", expanded=False):
+                    ladder_text = "  \n".join([f"<span style='color: #495057; font-size: 0.85rem;'>- LOC **${item['price']:,.2f}** × {item['qty']}주</span>" for item in ladder])
+                    st.markdown(ladder_text, unsafe_allow_html=True)
 
     else:
         st.info(f"현재 **{detected_mode}** 상태입니다. 안내에 따라 리버스 모드 매매를 진행하세요.")
@@ -441,4 +441,4 @@ with tab2:
 
 # 하단 푸터
 st.divider()
-st.caption(f"🚀 FIRE GATE 무한매수법 V4.0 Engine | 종목: {ticker} | 분할: {split_n}회 | T값: {t_value:g}")
+st.caption(f"🚀 Road to Billionaire Engine | 종목: {ticker} | 분할: {split_n}회 | T값: {t_value:g}")
