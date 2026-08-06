@@ -264,10 +264,10 @@ with main_content_col:
         
         ladder_html_items = ""
         if ladder:
-            items_str = "".join([f"<div style='font-size: 0.82rem; color: #6B7280; margin-bottom: 4px;'>- LOC ${item['price']:,.2f} × {item['qty']}주</div>" for item in ladder])
+            items_str = "".join([f"<div style='font-size: 0.85rem; color: #6B7280; margin-bottom: 4px;'>- LOC ${item['price']:,.2f} × {item['qty']}주</div>" for item in ladder])
             ladder_html_items = f"""
             <div style="background: #FAFAFA; border: 1px solid #F3F4F6; border-radius: 12px; padding: 16px 18px; margin-top: 14px;">
-                <div style="font-size: 0.78rem; color: #DC2626; font-weight: 700; margin-bottom: 10px;">+@ 폭락장 대비 추가 매수</div>
+                <div style="font-size: 0.82rem; color: #DC2626; font-weight: 700; margin-bottom: 10px;">+@ 폭락장 대비 추가 매수</div>
                 {items_str}
             </div>
             """
@@ -281,55 +281,45 @@ with main_content_col:
 
         progress_pct_val = progress_ratio * 100
 
-        # 1. 상단 진행 상황 카드 3분할 구조 (디자인 유지 및 코드 노출 방지)
+        # 1. 상단 진행 상황 카드 2개로 통합 및 폰트 대폭 확대
         card1_html = f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">진행 상황</div>
-                <div style="font-size: 1rem; font-weight: 800; color: #2563EB;">{progress_pct_val:.1f}%</div>
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div style="font-size: 1.15rem; font-weight: 800; color: #111315;">진행 상황</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #2563EB;">{progress_pct_val:.1f}%</div>
             </div>
-            <div style="width: 100%; background: #E5E7EB; border-radius: 9999px; height: 10px; overflow: hidden;">
+            <div style="width: 100%; background: #E5E7EB; border-radius: 9999px; height: 12px; overflow: hidden; margin-bottom: 20px;">
                 <div style="width: {progress_pct_val}%; background: #2563EB; height: 100%; border-radius: 9999px;"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1px solid #F3F4F6; padding-top: 18px;">
+                <div>
+                    <div style="font-size: 0.85rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">총 시드</div>
+                    <div style="font-size: 1.6rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.85rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">사용한 시드 (매입금액)</div>
+                    <div style="font-size: 1.6rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                </div>
             </div>
         </div>
         """
         st.markdown(card1_html, unsafe_allow_html=True)
 
         card2_html = f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 15px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 25px;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
                 <div>
-                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">시드</div>
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                    <div style="font-size: 0.85rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">평단가</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">{avg_price:,.3f} <span style="font-size: 0.95rem; color: #6B7280; font-weight: 600;">USD</span></div>
                 </div>
                 <div>
-                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">사용한 시드</div>
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
+                    <div style="font-size: 0.85rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">보유 수량</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">{current_shares:,} <span style="font-size: 0.95rem; color: #6B7280; font-weight: 600;">주</span></div>
                 </div>
             </div>
         </div>
         """
         st.markdown(card2_html, unsafe_allow_html=True)
-
-        card3_html = f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 20px;">
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                <div>
-                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">매입 금액</div>
-                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.75rem; color: #6B7280; font-weight: 600;">USD</span></div>
-                </div>
-                <div>
-                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">평단가</div>
-                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{avg_price:,.3f} <span style="font-size: 0.75rem; color: #6B7280; font-weight: 600;">USD</span></div>
-                </div>
-                <div>
-                    <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">보유 수량</div>
-                    <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{current_shares:,} <span style="font-size: 0.75rem; color: #6B7280; font-weight: 600;">주</span></div>
-                </div>
-            </div>
-        </div>
-        """
-        st.markdown(card3_html, unsafe_allow_html=True)
 
         # 2. 가이드 헤더 및 상태 배지
         header_html = f"""
