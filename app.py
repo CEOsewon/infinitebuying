@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (HTML 렌더링 오류 수정 및 크로스체크 탭 분리)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (네이티브 컴포넌트 기반 UI 최종 수정)
 =====================================================================================
 """
 
@@ -28,12 +28,6 @@ CUSTOM_UI_CSS = """
     input, div[data-testid="stNumberInput"] input, div[data-baseweb="select"] > div {
         border: 1px solid #CED4DA !important; border-radius: 8px !important;
     }
-    div[data-testid="stMetric"] {
-        background-color: #F8F9FA; border-radius: 10px; padding: 10px 14px; border: 1px solid #E9ECEF;
-    }
-    [data-testid="stMetricValue"] { font-size: 1.2rem; font-weight: 800; color: #111315; }
-    [data-testid="stMetricLabel"] { font-size: 0.75rem; color: #6C757D; font-weight: 600; }
-    
     .stTabs [data-baseweb="tab"] { font-weight: 700; font-size: 1rem; color: #4B5563; }
     .stTabs [aria-selected="true"] { color: #2563EB !important; }
     .stTabs [data-baseweb="tab-highlight"] { background-color: #2563EB !important; }
@@ -123,7 +117,7 @@ def fetch_market_data(ticker_symbol: str):
 
 
 # =================================================================================
-# 3. 사이드바 설정 (거래내역 자동 연동 분리 및 값 유지)
+# 3. 사이드바 설정
 # =================================================================================
 with st.sidebar:
     st.markdown("### 🚀 Road to Billionaire")
@@ -234,7 +228,7 @@ def build_fixed_50_ladder(base_price: float, base_amount: float):
 
 
 # =================================================================================
-# 5. 메인 UI 구성 (탭 분리 및 렌더링 오류 수정)
+# 5. 메인 UI 구성 (네이티브 컴포넌트 활용)
 # =================================================================================
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -246,134 +240,89 @@ st.markdown(f"""
 tab1, tab2, tab3 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래내역 입력", "🔍 거래내역 크로스체크"])
 
 with tab1:
-    # 1. 진행 상황 카드 박스
-    st.markdown(f"""
-    <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <span style="font-size: 1.1rem; font-weight: 800; color: #111315;">진행 상황</span>
-            <span style="font-size: 0.95rem; font-weight: 700; color: #2563EB;">{progress_ratio*100:.1f}%</span>
-        </div>
-        <div style="background: #E5E7EB; border-radius: 999px; height: 10px; width: 100%; overflow: hidden; margin-bottom: 20px;">
-            <div style="background: #2563EB; width: {progress_ratio*100}%; height: 100%; border-radius: 999px;"></div>
-        </div>
+    # 1. 진행 상황 카드 박스 (네이티브 컨테이너 활용)
+    with st.container(border=True):
+        col_p_top1, col_p_top2 = st.columns([4, 1])
+        col_p_top1.markdown("**진행 상황**")
+        col_p_top2.markdown(f"<div style='text-align: right; font-weight: 800; color: #2563EB;'>{progress_ratio*100:.1f}%</div>", unsafe_allow_html=True)
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-            <div>
-                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">시드</div>
-                <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{total_principal:,.0f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">사용한 시드</div>
-                <div style="font-size: 1.4rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.85rem; color: #6B7280; font-weight: 600;">USD</span></div>
-            </div>
-        </div>
+        st.progress(float(progress_ratio))
         
-        <div style="border-top: 1px solid #F3F4F6; padding-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-            <div>
-                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">매입 금액</div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{used_amount_calc:,.2f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">평단가</div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{avg_price:,.3f} <span style="font-size: 0.75rem; color: #6B7280;">USD</span></div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; color: #6B7280; font-weight: 700; margin-bottom: 4px;">보유 수량</div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{current_shares:,} <span style="font-size: 0.75rem; color: #6B7280;">주</span></div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        col_s1, col_s2 = st.columns(2)
+        col_s1.metric("시드", f"{total_principal:,.0f} USD")
+        col_s2.metric("사용한 시드", f"{used_amount_calc:,.2f} USD")
+        
+        st.divider()
+        
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("매입 금액", f"{used_amount_calc:,.2f} USD")
+        col_m2.metric("평단가", f"{avg_price:,.3f} USD")
+        col_m3.metric("보유 수량", f"{current_shares:,} 주")
 
-    # 2. 무한 매수법 가이드 메인 박스
+    st.markdown("<div style='margin: 15px 0;'></div>", unsafe_allow_html=True)
+
+    # 2. 무한 매수법 가이드 타이틀 및 뱃지
     col_guide_title, col_t_badge, col_star_badge = st.columns([2, 1, 1])
     
     with col_guide_title:
-        st.markdown("<h3 style='margin-top: 10px; font-size: 1.4rem;'>무한 매수법 가이드</h3>", unsafe_allow_html=True)
+        st.markdown("### 무한 매수법 가이드")
     with col_t_badge:
-        st.markdown(f"""
-        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px 14px; text-align: center;">
-            <div style="font-size: 0.7rem; color: #D97706; font-weight: 700;">T 값</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{t_value:g} <span style="font-size: 0.75rem;">회</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(f"<div style='text-align: center; font-size: 0.75rem; color: #D97706; font-weight: 700;'>T 값</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; font-size: 1.1rem; font-weight: 800;'>{t_value:g} 회</div>", unsafe_allow_html=True)
     with col_star_badge:
-        star_display = f"{star_pct*100:.2f}%" if stage_type in ("A", "B") else "—"
-        st.markdown(f"""
-        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 14px; padding: 10px 14px; text-align: center;">
-            <div style="font-size: 0.7rem; color: #2563EB; font-weight: 700;">Star 값</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{star_display}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='margin: 10px 0;'></div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            star_display = f"{star_pct*100:.2f}%" if stage_type in ("A", "B") else "—"
+            st.markdown(f"<div style='text-align: center; font-size: 0.75rem; color: #2563EB; font-weight: 700;'>Star 값</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; font-size: 1.1rem; font-weight: 800;'>{star_display}</div>", unsafe_allow_html=True)
 
     # Current State 표시
-    st.markdown(f"""
-    <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.01);">
-        <span style="background: #EFF6FF; color: #2563EB; padding: 6px 10px; border-radius: 8px; margin-right: 12px; font-size: 1rem;">📄</span>
-        <div>
-            <div style="font-size: 0.7rem; color: #6B7280; font-weight: 700; letter-spacing: 0.5px;">CURRENT STATE</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">{detected_mode}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.container(border=True):
+        col_cs1, col_cs2 = st.columns([0.1, 9.9])
+        col_cs1.markdown("📄")
+        col_cs2.markdown(f"<div style='font-size: 0.7rem; color: #6B7280; font-weight: 700;'>CURRENT STATE</div><div style='font-size: 1.1rem; font-weight: 800;'>{detected_mode}</div>", unsafe_allow_html=True)
+
+    st.markdown("<div style='margin: 10px 0;'></div>", unsafe_allow_html=True)
 
     # 3. 매수 / 매도 가이드 그리드 박스
     col_g1, col_g2 = st.columns(2)
 
     with col_g1:
-        q_full = math.floor(daily_buy_amount_normal / buy_point_price_normal) if buy_point_price_normal > 0 else 0
-        ladder = build_fixed_50_ladder(buy_point_price_normal, daily_buy_amount_normal)
-        ladder_html = ""
-        if ladder:
-            ladder_items = "".join([f"<div style='font-size: 0.82rem; color: #6B7280; margin-bottom: 5px;'>- LOC ${item['price']:,.2f} × {item['qty']}주</div>" for item in ladder])
-            ladder_html = f"""
-            <div style="background: #FAFAFA; border: 1px solid #F3F4F6; border-radius: 12px; padding: 16px 18px; margin-top: 14px;">
-                <div style="font-size: 0.78rem; color: #9CA3AF; font-weight: 700; margin-bottom: 10px;">+@ 폭락장 대비 추가 매수</div>
-                {ladder_items}
-            </div>
-            """
+        with st.container(border=True):
+            st.markdown("<h4 style='color: #DC2626; font-size: 1.1rem;'>매수 가이드</h4>", unsafe_allow_html=True)
+            q_full = math.floor(daily_buy_amount_normal / buy_point_price_normal) if buy_point_price_normal > 0 else 0
+            
+            with st.container(border=True):
+                st.markdown(f"<div style='font-size: 0.8rem; color: #DC2626; font-weight: 700;'>LOC ★{star_pct*100:.2f}%</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size: 1.4rem; font-weight: 800;'>${buy_point_price_normal:,.2f} <span style='font-size: 0.9rem; color: #6B7280;'>× {q_full:,}주</span></div>", unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
-            <h4 style='color: #DC2626; font-size: 1.1rem; margin-top: 0; margin-bottom: 18px;'>매수 가이드</h4>
-            <div style="background: #FFFDFD; border: 1px solid #FEE2E2; border-radius: 12px; padding: 18px 20px;">
-                <div style="font-size: 0.8rem; color: #DC2626; font-weight: 700; margin-bottom: 6px;">LOC ★{star_pct*100:.2f}%</div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${buy_point_price_normal:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {q_full:,}주</span></div>
-            </div>
-            {ladder_html}
-        </div>
-        """, unsafe_allow_html=True)
+            ladder = build_fixed_50_ladder(buy_point_price_normal, daily_buy_amount_normal)
+            if ladder:
+                with st.container(border=True):
+                    st.markdown("<div style='font-size: 0.78rem; color: #9CA3AF; font-weight: 700; margin-bottom: 6px;'>+@ 폭락장 대비 추가 매수</div>", unsafe_allow_html=True)
+                    for item in ladder:
+                        st.markdown(f"<div style='font-size: 0.82rem; color: #6B7280;'>- LOC ${item['price']:,.2f} × {item['qty']}주</div>", unsafe_allow_html=True)
 
     with col_g2:
-        quarter_sell_qty = math.floor(current_shares / 4)
-        remain_sell_qty = current_shares - quarter_sell_qty
-        target_sell_price = avg_price * (1 + target_pct)
+        with st.container(border=True):
+            st.markdown("<h4 style='color: #2563EB; font-size: 1.1rem;'>매도 가이드</h4>", unsafe_allow_html=True)
+            quarter_sell_qty = math.floor(current_shares / 4)
+            remain_sell_qty = current_shares - quarter_sell_qty
+            target_sell_price = avg_price * (1 + target_pct)
 
-        st.markdown(f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
-            <h4 style='color: #2563EB; font-size: 1.1rem; margin-top: 0; margin-bottom: 18px;'>매도 가이드</h4>
-            <div style="background: #F8FAFC; border: 1px solid #DBEAFE; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px;">
-                <div style="font-size: 0.8rem; color: #2563EB; font-weight: 700; margin-bottom: 6px;">LOC ★{star_pct*100:.2f}%</div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${star_price_normal:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {quarter_sell_qty:,}주</span></div>
-            </div>
-            <div style="background: #F8FAFC; border: 1px solid #DBEAFE; border-radius: 12px; padding: 18px 20px;">
-                <div style="font-size: 0.8rem; color: #2563EB; font-weight: 700; margin-bottom: 6px;">지정가 +{target_pct*100:.0f}%</div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: #111315;">${target_sell_price:,.2f} <span style="font-size: 1rem; color: #6B7280; font-weight: 600;">× {remain_sell_qty:,}주</span></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown(f"<div style='font-size: 0.8rem; color: #2563EB; font-weight: 700;'>LOC ★{star_pct*100:.2f}%</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size: 1.4rem; font-weight: 800;'>${star_price_normal:,.2f} <span style='font-size: 0.9rem; color: #6B7280;'>× {quarter_sell_qty:,}주</span></div>", unsafe_allow_html=True)
+
+            with st.container(border=True):
+                st.markdown(f"<div style='font-size: 0.8rem; color: #2563EB; font-weight: 700;'>지정가 +{target_pct*100:.0f}%</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size: 1.4rem; font-weight: 800;'>${target_sell_price:,.2f} <span style='font-size: 0.9rem; color: #6B7280;'>× {remain_sell_qty:,}주</span></div>", unsafe_allow_html=True)
 
 with tab2:
     st.markdown("### 거래 내역 입력")
     
     with st.container(border=True):
-        st.markdown("""
-        <div style="background-color: #F0F7FF; padding: 10px 14px; border-radius: 8px; border: 1px solid #D0E3FF; margin-bottom: 15px;">
-            <span style="color: #1D4ED8; font-weight: 700; font-size: 0.9rem;">📝 거래 유형 선택 및 입력 (사이드바 값에 즉시 영향 주지 않음)</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("📝 거래 유형 선택 및 입력 (사이드바 값에 즉시 영향 주지 않음)")
 
         col_i1, col_i2 = st.columns(2)
         trade_date = col_i1.date_input("체결 날짜", value=datetime.today())
@@ -412,10 +361,9 @@ with tab2:
             }
             history_list.insert(0, new_record)
             update_setting("trade_history", history_list)
-            st.success("거래 내역이 기록되었습니다! ('거래내역 크로스체크' 탭에서 오차를 확인할 수 있습니다.)")
+            st.success("거래 내역이 기록되었습니다!")
             st.rerun()
 
-    # 거래 내역 표
     st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
     history_list = st.session_state.get("trade_history", [])
     
@@ -424,43 +372,27 @@ with tab2:
             update_setting("trade_history", [])
             st.rerun()
 
-        th1, th2, th3, th4, th5, th6 = st.columns([1, 1.5, 1.8, 1.5, 1, 1.2])
-        th1.markdown("<span style='color: #9CA3AF; font-size: 0.8rem; font-weight: 700;'>NO</span>", unsafe_allow_html=True)
-        th2.markdown("<span style='color: #9CA3AF; font-size: 0.8rem; font-weight: 700;'>날짜</span>", unsafe_allow_html=True)
-        th3.markdown("<span style='color: #9CA3AF; font-size: 0.8rem; font-weight: 700;'>구분</span>", unsafe_allow_html=True)
-        th4.markdown("<span style='color: #9CA3AF; font-size: 0.8rem; font-weight: 700;'>체결가</span>", unsafe_allow_html=True)
-        th5.markdown("<span style='color: #9CA3AF; font-size: 0.8rem; font-weight: 700;'>수량</span>", unsafe_allow_html=True)
-        th6.markdown("<span style='color: #9CA3AF; font-size: 0.8rem; font-weight: 700;'>거래금액</span>", unsafe_allow_html=True)
-        st.markdown("<div style='border-bottom: 1px solid #E5E7EB; margin: 8px 0;'></div>", unsafe_allow_html=True)
-
-        total_cnt = len(history_list)
         for idx, item in enumerate(history_list):
-            row_no = f"#{total_cnt - idx}"
-            col_h1, col_h2, col_h3, col_h4, col_h5, col_h6 = st.columns([1, 1.5, 1.8, 1.5, 1, 1.2])
-            
-            col_h1.markdown(f"<span style='color: #9CA3AF; font-size: 0.85rem;'>{row_no}</span>", unsafe_allow_html=True)
-            col_h2.markdown(f"<span style='color: #4B5563; font-size: 0.85rem;'>{item['date']}</span>", unsafe_allow_html=True)
-            
-            badge_color = "background: #FEE2E2; color: #DC2626;" if "매수" in item['action'] else "background: #DBEAFE; color: #1D4ED8;"
-            col_h3.markdown(f"<span style='{badge_color} padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: 700;'>{item['action']}</span>", unsafe_allow_html=True)
-            
-            col_h4.markdown(f"<span style='font-weight: 700; font-size: 0.88rem;'>${item['price']:,.2f}</span>", unsafe_allow_html=True)
-            col_h5.markdown(f"<span style='font-size: 0.88rem;'>{item['shares']}주</span>", unsafe_allow_html=True)
-            
-            sub_col_amt, sub_col_del = col_h6.columns([3, 1])
-            sub_col_amt.markdown(f"<span style='font-weight: 700; font-size: 0.88rem;'>${item['amount']:,.2f}</span>", unsafe_allow_html=True)
-            if sub_col_del.button("✕", key=f"del_{item['id']}_{idx}"):
-                history_list.pop(idx)
-                update_setting("trade_history", history_list)
-                st.rerun()
+            with st.container(border=True):
+                col_h1, col_h2, col_h3, col_h4, col_h5, col_h6 = st.columns([1, 1.5, 1.8, 1.5, 1, 1.2])
+                col_h1.markdown(f"**#{len(history_list) - idx}**")
+                col_h2.markdown(f"{item['date']}")
+                col_h3.markdown(f"**{item['action']}**")
+                col_h4.markdown(f"${item['price']:,.2f}")
+                col_h5.markdown(f"{item['shares']}주")
                 
-            st.markdown("<div style='border-bottom: 1px solid #F3F4F6; margin: 6px 0;'></div>", unsafe_allow_html=True)
+                sub_col_amt, sub_col_del = col_h6.columns([3, 1])
+                sub_col_amt.markdown(f"**${item['amount']:,.2f}**")
+                if sub_col_del.button("✕", key=f"del_{item['id']}_{idx}"):
+                    history_list.pop(idx)
+                    update_setting("trade_history", history_list)
+                    st.rerun()
     else:
         st.info("기록된 거래 내역이 없습니다.")
 
 with tab3:
     st.markdown("### 🔍 거래내역 크로스체크 및 오차 검증 센터")
-    st.markdown("<p style='color: #6B7280; font-size: 0.9rem;'>왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 차이가 있는지 진단합니다.</p>", unsafe_allow_html=True)
+    st.markdown("왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 오차를 진단합니다.")
     
     history_list = st.session_state.get("trade_history", [])
     calc_shares, calc_total_cost, calc_t = 0, 0.0, 0.0
@@ -477,53 +409,40 @@ with tab3:
     diff_avg = st.session_state.avg_price - calc_avg
     diff_t = st.session_state.t_value - max(calc_t, 0.0)
 
-    # 오차 검증 결과 카드
     c1, c2, c3 = st.columns(3)
     
     with c1:
-        status_color = "#DC2626" if diff_shares != 0 else "#059669"
-        status_text = f"오차 발생 ({diff_shares:+d}주)" if diff_shares != 0 else "일치함"
-        st.markdown(f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;">
-            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">보유 주식수 비교</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">설정: {st.session_state.current_shares}주</div>
-            <div style="font-size: 0.9rem; color: #4B5563; margin-top: 2px;">거래기록: {calc_shares}주</div>
-            <div style="font-size: 0.85rem; font-weight: 700; color: {status_color}; margin-top: 8px;">상태: {status_text}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("**보유 주식수 비교**")
+            st.markdown(f"설정: {st.session_state.current_shares}주")
+            st.markdown(f"거래기록: {calc_shares}주")
+            status_text = f"오차 발생 ({diff_shares:+d}주)" if diff_shares != 0 else "일치함"
+            st.markdown(f"상태: **{status_text}**")
 
     with c2:
-        status_color_avg = "#DC2626" if abs(diff_avg) > 0.01 else "#059669"
-        status_text_avg = f"오차 발생 (${diff_avg:+.2f})" if abs(diff_avg) > 0.01 else "일치함"
-        st.markdown(f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;">
-            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">평균단가 비교</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">설정: ${st.session_state.avg_price:,.2f}</div>
-            <div style="font-size: 0.9rem; color: #4B5563; margin-top: 2px;">거래기록: ${calc_avg:,.2f}</div>
-            <div style="font-size: 0.85rem; font-weight: 700; color: {status_color_avg}; margin-top: 8px;">상태: {status_text_avg}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("**평균단가 비교**")
+            st.markdown(f"설정: ${st.session_state.avg_price:,.2f}")
+            st.markdown(f"거래기록: ${calc_avg:,.2f}")
+            status_text_avg = f"오차 발생 (${diff_avg:+.2f})" if abs(diff_avg) > 0.01 else "일치함"
+            st.markdown(f"상태: **{status_text_avg}**")
 
     with c3:
-        status_color_t = "#DC2626" if abs(diff_t) > 0.01 else "#059669"
-        status_text_t = f"오차 발생 ({diff_t:+.1f}회)" if abs(diff_t) > 0.01 else "일치함"
-        st.markdown(f"""
-        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;">
-            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">진행 회차(T값) 비교</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">설정: {st.session_state.t_value:g}회</div>
-            <div style="font-size: 0.9rem; color: #4B5563; margin-top: 2px;">거래기록: {max(calc_t, 0.0):g}회</div>
-            <div style="font-size: 0.85rem; font-weight: 700; color: {status_color_t}; margin-top: 8px;">상태: {status_text_t}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("**진행 회차(T값) 비교**")
+            st.markdown(f"설정: {st.session_state.t_value:g}회")
+            st.markdown(f"거래기록: {max(calc_t, 0.0):g}회")
+            status_text_t = f"오차 발생 ({diff_t:+.1f}회)" if abs(diff_t) > 0.01 else "일치함"
+            st.markdown(f"상태: **{status_text_t}**")
 
     st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
     if len(history_list) == 0:
-        st.info("비교할 거래 내역이 없습니다. '거래내역 입력' 탭에서 내역을 먼저 추가해주세요.")
+        st.info("비교할 거래 내역이 없습니다.")
     elif diff_shares == 0 and abs(diff_avg) <= 0.01 and abs(diff_t) <= 0.01:
         st.success("✨ 완벽합니다! 사이드바 입력값과 거래내역 누적 계산값이 완전히 일치합니다.")
     else:
-        st.warning("⚠️ 사이드바의 입력값과 거래기록 누적값 사이에 오차가 존재합니다. 아래 버튼을 눌러 거래기록 기준으로 동기화할 수 있습니다.")
+        st.warning("⚠️ 사이드바 입력값과 거래기록 누적값 사이에 오차가 존재합니다.")
         if st.button("🔄 거래내역 기준으로 사이드바 값 동기화하기", type="primary"):
             update_setting("current_shares", calc_shares)
             update_setting("avg_price", round(calc_avg, 2))
