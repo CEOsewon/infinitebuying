@@ -1,6 +1,6 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (스크린샷 레이아웃 최종 버전)
+무한매수법 V4.0 - 레버리지 ETF 퀀트 대시보드 (HTML 렌더링 오류 수정 및 크로스체크 탭 분리)
 =====================================================================================
 """
 
@@ -40,7 +40,6 @@ CUSTOM_UI_CSS = """
     
     .badge-v4 { display: inline-block; background: #DBEAFE; color: #1E40AF; font-weight: 800; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; vertical-align: middle; margin-left: 6px; }
     
-    /* 파스텔 그린 커스텀 버튼 */
     .stButton button[kind="primary"] {
         background-color: #D1FAE5 !important;
         color: #065F46 !important;
@@ -124,7 +123,7 @@ def fetch_market_data(ticker_symbol: str):
 
 
 # =================================================================================
-# 3. 사이드바 설정 (크로스체크 기능 포함)
+# 3. 사이드바 설정 (거래내역 자동 연동 분리 및 값 유지)
 # =================================================================================
 with st.sidebar:
     st.markdown("### 🚀 Road to Billionaire")
@@ -160,33 +159,6 @@ with st.sidebar:
 
     remaining_cash = max(st.session_state.total_principal - (st.session_state.current_shares * st.session_state.avg_price), 0.0)
     st.metric("남은 잔금", f"${remaining_cash:,.2f}")
-
-    # 거래내역 기반 자동 계산값 산출 (크로스체크용)
-    history_list = st.session_state.get("trade_history", [])
-    calc_shares, calc_total_cost, calc_t = 0, 0.0, 0.0
-    for h in history_list:
-        calc_t += h["t_impact"]
-        if "매수" in h["action"]:
-            calc_shares += h["shares"]
-            calc_total_cost += h["amount"]
-        elif "매도" in h["action"] or "전량" in h["action"]:
-            calc_shares = max(calc_shares - h["shares"], 0)
-    calc_avg = (calc_total_cost / calc_shares) if calc_shares > 0 else 0.0
-
-    st.divider()
-    st.markdown("#### 🔍 거래내역 크로스체크")
-    st.markdown(f"<div style='font-size:0.8rem; color:#6B7280; margin-bottom:8px;'>입력값과 거래기록 누적값을 비교합니다.</div>", unsafe_allow_html=True)
-    st.markdown(f"- **기록된 거래 건수**: {len(history_list)}건")
-    st.markdown(f"- **거래기록상 주식수**: {calc_shares}주 (현재 설정: {st.session_state.current_shares}주)")
-    st.markdown(f"- **거래기록상 평단가**: ${calc_avg:,.2f} (현재 설정: ${st.session_state.avg_price:,.2f})")
-    st.markdown(f"- **거래기록상 T값**: {calc_t:g} (현재 설정: {st.session_state.t_value:g})")
-
-    if len(history_list) > 0 and (calc_shares != st.session_state.current_shares or abs(calc_avg - st.session_state.avg_price) > 0.01):
-        if st.button("🔄 거래내역 값으로 사이드바 동기화", use_container_width=True):
-            update_setting("current_shares", calc_shares)
-            update_setting("avg_price", round(calc_avg, 2))
-            update_setting("t_value", round(max(calc_t, 0.0), 2))
-            st.rerun()
 
     st.divider()
     st.markdown("#### 🌐 시장 데이터")
@@ -262,7 +234,7 @@ def build_fixed_50_ladder(base_price: float, base_amount: float):
 
 
 # =================================================================================
-# 5. 메인 UI 구성 (스크린샷 레이아웃 반영)
+# 5. 메인 UI 구성 (탭 분리 및 렌더링 오류 수정)
 # =================================================================================
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -271,10 +243,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-tab1, tab2 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래내역 입력"])
+tab1, tab2, tab3 = st.tabs(["🎯 오늘의 매수/매도 가이드", "⚡ 거래내역 입력", "🔍 거래내역 크로스체크"])
 
 with tab1:
-    # 1. 스크린샷 스타일 진행 상황 카드 박스
+    # 1. 진행 상황 카드 박스
     st.markdown(f"""
     <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -405,7 +377,6 @@ with tab2:
 
         col_i1, col_i2 = st.columns(2)
         trade_date = col_i1.date_input("체결 날짜", value=datetime.today())
-        
         main_category = col_i2.radio("거래 대분류", ["매수", "매도"], horizontal=True)
         
         if main_category == "매수":
@@ -441,7 +412,7 @@ with tab2:
             }
             history_list.insert(0, new_record)
             update_setting("trade_history", history_list)
-            st.success("거래 내역이 기록되었습니다! (사이드바 크로스체크 패널에서 비교 및 동기화 가능)")
+            st.success("거래 내역이 기록되었습니다! ('거래내역 크로스체크' 탭에서 오차를 확인할 수 있습니다.)")
             st.rerun()
 
     # 거래 내역 표
@@ -486,3 +457,76 @@ with tab2:
             st.markdown("<div style='border-bottom: 1px solid #F3F4F6; margin: 6px 0;'></div>", unsafe_allow_html=True)
     else:
         st.info("기록된 거래 내역이 없습니다.")
+
+with tab3:
+    st.markdown("### 🔍 거래내역 크로스체크 및 오차 검증 센터")
+    st.markdown("<p style='color: #6B7280; font-size: 0.9rem;'>왼쪽 대시보드(수동 입력값)와 실제 입력된 거래내역들의 누적 계산값을 비교하여 차이가 있는지 진단합니다.</p>", unsafe_allow_html=True)
+    
+    history_list = st.session_state.get("trade_history", [])
+    calc_shares, calc_total_cost, calc_t = 0, 0.0, 0.0
+    for h in history_list:
+        calc_t += h["t_impact"]
+        if "매수" in h["action"]:
+            calc_shares += h["shares"]
+            calc_total_cost += h["amount"]
+        elif "매도" in h["action"] or "전량" in h["action"]:
+            calc_shares = max(calc_shares - h["shares"], 0)
+    calc_avg = (calc_total_cost / calc_shares) if calc_shares > 0 else 0.0
+
+    diff_shares = st.session_state.current_shares - calc_shares
+    diff_avg = st.session_state.avg_price - calc_avg
+    diff_t = st.session_state.t_value - max(calc_t, 0.0)
+
+    # 오차 검증 결과 카드
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        status_color = "#DC2626" if diff_shares != 0 else "#059669"
+        status_text = f"오차 발생 ({diff_shares:+d}주)" if diff_shares != 0 else "일치함"
+        st.markdown(f"""
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;">
+            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">보유 주식수 비교</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">설정: {st.session_state.current_shares}주</div>
+            <div style="font-size: 0.9rem; color: #4B5563; margin-top: 2px;">거래기록: {calc_shares}주</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: {status_color}; margin-top: 8px;">상태: {status_text}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c2:
+        status_color_avg = "#DC2626" if abs(diff_avg) > 0.01 else "#059669"
+        status_text_avg = f"오차 발생 (${diff_avg:+.2f})" if abs(diff_avg) > 0.01 else "일치함"
+        st.markdown(f"""
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;">
+            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">평균단가 비교</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">설정: ${st.session_state.avg_price:,.2f}</div>
+            <div style="font-size: 0.9rem; color: #4B5563; margin-top: 2px;">거래기록: ${calc_avg:,.2f}</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: {status_color_avg}; margin-top: 8px;">상태: {status_text_avg}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c3:
+        status_color_t = "#DC2626" if abs(diff_t) > 0.01 else "#059669"
+        status_text_t = f"오차 발생 ({diff_t:+.1f}회)" if abs(diff_t) > 0.01 else "일치함"
+        st.markdown(f"""
+        <div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px;">
+            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 700; margin-bottom: 6px;">진행 회차(T값) 비교</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #111315;">설정: {st.session_state.t_value:g}회</div>
+            <div style="font-size: 0.9rem; color: #4B5563; margin-top: 2px;">거래기록: {max(calc_t, 0.0):g}회</div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: {status_color_t}; margin-top: 8px;">상태: {status_text_t}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+
+    if len(history_list) == 0:
+        st.info("비교할 거래 내역이 없습니다. '거래내역 입력' 탭에서 내역을 먼저 추가해주세요.")
+    elif diff_shares == 0 and abs(diff_avg) <= 0.01 and abs(diff_t) <= 0.01:
+        st.success("✨ 완벽합니다! 사이드바 입력값과 거래내역 누적 계산값이 완전히 일치합니다.")
+    else:
+        st.warning("⚠️ 사이드바의 입력값과 거래기록 누적값 사이에 오차가 존재합니다. 아래 버튼을 눌러 거래기록 기준으로 동기화할 수 있습니다.")
+        if st.button("🔄 거래내역 기준으로 사이드바 값 동기화하기", type="primary"):
+            update_setting("current_shares", calc_shares)
+            update_setting("avg_price", round(calc_avg, 2))
+            update_setting("t_value", round(max(calc_t, 0.0), 2))
+            st.success("동기화가 완료되었습니다!")
+            st.rerun()
