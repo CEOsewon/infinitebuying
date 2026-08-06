@@ -1,18 +1,11 @@
 """
 =====================================================================================
-무한매수법 V4.0 - 레버리지 ETF(TQQQ / SOXL) 퀀트 매매 대시보드
+무한매수법 V4.0 - 레버리지 ETF(TQQQ / SOXL) 퀀트 매매 대시보드 (개인 전용 싱글탑)
 =====================================================================================
-- Google / Naver 소셜 로그인 전용 (자체 회원가입 없음)
-- 계정별 설정 자동 저장 (user_settings.json, 원자적 저장 + 백업 + 선택적 암호화)
+- 로그인 절차 없이 접속 즉시 사용 (개인 전용 단일 저장소 구조)
+- 입력 데이터 자동 저장 (user_settings.json, 원자적 저장 + 백업으로 유실/손상 방지)
 - 남은 잔금 자동 계산
-- 폭락장 대비 추가매수 "사다리" 주문 계산 (최대 하락률까지 1주 단위로 커버)
-
-⚠️ 실행 전 준비사항
-1) 이 앱을 실행하려면 프로젝트 폴더에 `.streamlit/secrets.toml` 파일이 필요합니다.
-   아래 [로그인 설정] 섹션의 주석을 참고해서 채워주세요. (구글/네이버 개발자 콘솔에서 발급)
-2) 필요한 패키지: pip install streamlit requests cryptography
-   (Google 로그인은 Streamlit 1.42+ 의 내장 인증 기능(st.login)을 사용하며, Authlib이 함께 설치됩니다)
-3) 이 앱은 특정 개인 전략(무한매수법 V4.0)을 코드로 구현한 계산 도구이며, 투자 조언이 아닙니다.
+- 폭락장 대비 추가매수 "사다리" 주문 계산 (최대 하락률까지 1주 단위 커버)
 =====================================================================================
 """
 
@@ -20,19 +13,8 @@ import math
 import os
 import json
 import threading
-import secrets as pysecrets
 from pathlib import Path
-from urllib.parse import urlencode
-
-import requests
 import streamlit as st
-
-try:
-    from cryptography.fernet import Fernet
-    _CRYPTO_AVAILABLE = True
-except ImportError:
-    _CRYPTO_AVAILABLE = False
-
 
 # =================================================================================
 # 0. 기본 페이지 설정 & 스타일 (FIRE GATE 스타일 참고: 다크 사이드바 + 화이트 카드)
@@ -89,7 +71,7 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 # =================================================================================
-# 1. 계정별 설정 저장소 (JSON, 원자적 저장 + 자동 백업 + 선택적 암호화)
+# 1. 개인 데이터 저장소 (JSON, 원자적 저장 + 자동 백업으로 유실 방지)
 # =================================================================================
 DATA_PATH = Path(__file__).parent / "user_settings.json"
 _FILE_LOCK = threading.Lock()
@@ -107,224 +89,48 @@ DEFAULT_SETTINGS = {
 }
 
 
-def _get_fernet():
-    """
-    st.secrets 에 data_encryption_key가 설정돼 있으면 저장 파일을 암호화합니다.
-    (선택사항 - 없으면 평문 JSON으로 저장되며, 파일시스템 접근 권한으로만 보호됩니다)
-    """
-    if not _CRYPTO_AVAILABLE:
-        return None
-    try:
-        key = st.secrets.get("data_encryption_key", None)
-    except Exception:
-        key = None
-    if not key:
-        return None
-    try:
-        return Fernet(key.encode() if isinstance(key, str) else key)
-    except Exception:
-        return None
-
-
-def load_all_settings() -> dict:
+def load_settings() -> dict:
     if not DATA_PATH.exists():
-        return {}
+        return DEFAULT_SETTINGS.copy()
     try:
-        raw = DATA_PATH.read_bytes()
-        fernet = _get_fernet()
-        if fernet:
-            raw = fernet.decrypt(raw)
-        return json.loads(raw.decode("utf-8"))
+        raw = DATA_PATH.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        # 누락된 키가 있다면 기본값으로 채워줌
+        merged = DEFAULT_SETTINGS.copy()
+        merged.update(data)
+        return merged
     except Exception:
-        # 파일이 손상되었거나 키가 맞지 않는 경우 - 서비스가 죽지 않도록 빈 값으로 안전하게 폴백
-        return {}
+        return DEFAULT_SETTINGS.copy()
 
 
-def save_all_settings(data: dict) -> None:
+def save_settings(settings: dict) -> None:
     """
-    원자적 저장: 임시파일에 먼저 쓰고 os.replace로 교체 -> 저장 도중 프로세스가 죽어도
-    기존 파일이 손상되지 않습니다. 교체 직전에는 기존 파일을 .bak으로 백업합니다.
+    원자적 저장: 임시파일에 먼저 쓰고 os.replace로 교체하여 저장 도중 앱이 꺼져도 
+    기존 파일이 절대 손상되거나 유실되지 않도록 보호합니다.
     """
-    payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
-    fernet = _get_fernet()
-    if fernet:
-        payload = fernet.encrypt(payload)
-
+    payload = json.dumps(settings, ensure_ascii=False, indent=2)
     with _FILE_LOCK:
         tmp_path = DATA_PATH.with_suffix(".tmp")
         bak_path = DATA_PATH.with_suffix(".bak")
         try:
             if DATA_PATH.exists():
-                bak_path.write_bytes(DATA_PATH.read_bytes())
+                bak_path.write_text(DATA_PATH.read_text(encoding="utf-8"), encoding="utf-8")
         except Exception:
             pass
-        tmp_path.write_bytes(payload)
+        tmp_path.write_text(payload, encoding="utf-8")
         os.replace(tmp_path, DATA_PATH)
 
 
-def save_user_settings(user_key: str, settings: dict) -> None:
-    all_data = load_all_settings()
-    all_data[user_key] = settings
-    save_all_settings(all_data)
-
-
-def delete_user_settings(user_key: str) -> None:
-    all_data = load_all_settings()
-    if user_key in all_data:
-        del all_data[user_key]
-        save_all_settings(all_data)
-
-
-# =================================================================================
-# 2. 로그인 (Google: Streamlit 내장 OIDC / Naver: 수동 OAuth2 인가코드 흐름)
-# =================================================================================
-NAVER_AUTH_URL = "https://nid.naver.com/oauth2.0/authorize"
-NAVER_TOKEN_URL = "https://nid.naver.com/oauth2.0/token"
-NAVER_PROFILE_URL = "https://openapi.naver.com/v1/nid/me"
-
-
-def _secrets_section(name: str) -> dict:
-    try:
-        return dict(st.secrets.get(name, {}))
-    except Exception:
-        return {}
-
-
-def google_configured() -> bool:
-    auth = _secrets_section("auth")
-    return bool(auth) and ("google" in st.secrets.get("auth", {}) or "client_id" in auth)
-
-
-def naver_configured() -> bool:
-    naver = _secrets_section("naver")
-    return all(k in naver for k in ("client_id", "client_secret", "redirect_uri"))
-
-
-def try_restore_google_session():
-    """Streamlit 내장 st.user (구글 OIDC 로그인 결과)를 세션에 반영"""
-    if st.session_state.get("auth_user") is not None:
-        return
-    try:
-        if getattr(st.user, "is_logged_in", False):
-            st.session_state.auth_user = {
-                "provider": "google",
-                "key": f"google:{st.user.email}",
-                "name": getattr(st.user, "name", None) or st.user.email,
-                "email": getattr(st.user, "email", None),
-            }
-    except Exception:
-        pass
-
-
-def handle_naver_callback():
-    """네이버 로그인 콜백(인가코드) 처리 - 쿼리 파라미터에 code가 있으면 토큰/프로필 교환"""
-    if st.session_state.get("auth_user") is not None:
-        return
-    qp = dict(st.query_params)
-    code = qp.get("code")
-    state = qp.get("state")
-    expected_state = st.session_state.get("naver_oauth_state")
-    if not code or not state or not expected_state or state != expected_state:
-        return
-
-    naver = _secrets_section("naver")
-    try:
-        token_resp = requests.get(
-            NAVER_TOKEN_URL,
-            params={
-                "grant_type": "authorization_code",
-                "client_id": naver["client_id"],
-                "client_secret": naver["client_secret"],
-                "redirect_uri": naver["redirect_uri"],
-                "code": code,
-                "state": state,
-            },
-            timeout=10,
-        )
-        token_resp.raise_for_status()
-        access_token = token_resp.json().get("access_token")
-
-        profile_resp = requests.get(
-            NAVER_PROFILE_URL,
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
-        )
-        profile_resp.raise_for_status()
-        profile = profile_resp.json().get("response", {})
-
-        st.session_state.auth_user = {
-            "provider": "naver",
-            "key": f"naver:{profile.get('id')}",
-            "name": profile.get("nickname") or profile.get("name") or "네이버 사용자",
-            "email": profile.get("email"),
-        }
-        st.session_state.naver_oauth_state = None
-        st.query_params.clear()
-        st.rerun()
-    except Exception:
-        # 실패해도 민감정보(토큰 등)를 화면에 노출하지 않고 조용히 로그인 실패 처리
-        st.session_state.auth_user = None
-        st.query_params.clear()
-        st.error("네이버 로그인 처리 중 문제가 발생했습니다. 다시 시도해주세요.")
-
-
-def login_screen():
-    st.title("🔥 무한매수법 V4.0 대시보드")
-    st.caption("Google 또는 Naver 계정으로 로그인하면 설정이 자동으로 저장/불러오기 됩니다.")
-
-    with st.container(border=True):
-        st.markdown("### 로그인")
-
-        if google_configured():
-            if st.button("🟦 Google로 로그인", use_container_width=True):
-                st.login("google")
-        else:
-            st.caption("⚠️ Google 로그인이 아직 설정되지 않았습니다 (secrets.toml [auth.google] 필요)")
-
-        st.markdown("")
-
-        if naver_configured():
-            naver = _secrets_section("naver")
-            if st.button("🟩 Naver로 로그인", use_container_width=True):
-                state = pysecrets.token_urlsafe(16)
-                st.session_state.naver_oauth_state = state
-                url = f"{NAVER_AUTH_URL}?{urlencode({'response_type': 'code', 'client_id': naver['client_id'], 'redirect_uri': naver['redirect_uri'], 'state': state})}"
-                st.link_button("네이버 로그인 계속하기 →", url, use_container_width=True)
-        else:
-            st.caption("⚠️ Naver 로그인이 아직 설정되지 않았습니다 (secrets.toml [naver] 필요)")
-
-        if not google_configured() and not naver_configured():
-            st.info(
-                "로그인 제공자가 설정되지 않았습니다. 프로젝트 폴더에 `.streamlit/secrets.toml`을 만들고 "
-                "코드 상단 주석의 안내에 따라 Google/Naver 앱 정보를 입력해주세요."
-            )
-
-
-# --- 세션 초기화 ---
-if "auth_user" not in st.session_state:
-    st.session_state.auth_user = None
-
-try_restore_google_session()
-handle_naver_callback()
-
-if st.session_state.auth_user is None:
-    login_screen()
-    st.stop()
-
-CURRENT_USER = st.session_state.auth_user
-USER_KEY = CURRENT_USER["key"]
-
-all_settings = load_all_settings()
-saved_settings = all_settings.get(USER_KEY, DEFAULT_SETTINGS.copy())
-
-if not st.session_state.get("settings_loaded_for", None) == USER_KEY:
-    for k, v in saved_settings.items():
+# 세션 상태 초기화 (최초 접속 시 파일에서 불러오기)
+if "settings_loaded" not in st.session_state:
+    saved = load_settings()
+    for k, v in saved.items():
         st.session_state[k] = v
-    st.session_state.settings_loaded_for = USER_KEY
+    st.session_state.settings_loaded = True
 
 
 # =================================================================================
-# 3. 핵심 계산 함수들
+# 2. 핵심 계산 함수들
 # =================================================================================
 
 def get_star_percent(ticker: str, split_n: int, t: float) -> float:
@@ -354,11 +160,7 @@ def calc_daily_buy_amount_reverse(remaining_cash: float) -> float:
 
 def build_crash_buy_ladder(base_price: float, base_amount: float, max_drop_pct: float):
     """
-    폭락장 대비 추가매수 "사다리" 계산 (Fire Gate 방식과 동일한 로직)
-    - 기준가(base_price)에서 1회 매수금(base_amount)으로 살 수 있는 수량 = base_qty (내림)
-    - price(n) = base_amount / n  →  n주를 살 수 있게 되는 정확한 가격
-    - n = base_qty+1, base_qty+2, ... 로 늘려가며, 가격이 base_price 대비 max_drop_pct%
-      하락하는 지점까지 1주 단위로 LOC 매수 주문을 나열
+    폭락장 대비 추가매수 "사다리" 계산 (Fire Gate 방식 동일 로직)
     """
     if base_price <= 0 or base_amount <= 0:
         return []
@@ -373,7 +175,7 @@ def build_crash_buy_ladder(base_price: float, base_amount: float, max_drop_pct: 
             break
         ladder.append({"price": round(price, 2), "qty": 1})
         n += 1
-        if n - base_qty > 500:  # 무한루프 방지 안전장치
+        if n - base_qty > 500:  # 무한루프 방지
             break
     return ladder
 
@@ -412,28 +214,18 @@ def render_crash_buy_section(reference_buy_point_price: float, base_buy_amount: 
 
 
 # =================================================================================
-# 4. 사이드바 - 사용자 입력값 (계정별 저장 포함)
+# 3. 사이드바 - 사용자 입력값 (실시간 연동 & 자동저장 버튼)
 # =================================================================================
 with st.sidebar:
     st.markdown("### 🔥 무한매수법 V4.0")
-    st.caption(f"👤 {CURRENT_USER['name']} ({CURRENT_USER['provider']})")
+    st.caption("개인 맞춤형 전용 대시보드")
 
-    colL, colR = st.columns(2)
-    with colL:
-        if st.button("🔄 불러오기", use_container_width=True):
-            for k, v in saved_settings.items():
-                st.session_state[k] = v
-            st.rerun()
-    with colR:
-        if st.button("🚪 로그아웃", use_container_width=True):
-            if CURRENT_USER["provider"] == "google":
-                try:
-                    st.logout()
-                except Exception:
-                    pass
-            st.session_state.auth_user = None
-            st.session_state.settings_loaded_for = None
-            st.rerun()
+    if st.button("🔄 파일에서 다시 불러오기", use_container_width=True):
+        saved = load_settings()
+        for k, v in saved.items():
+            st.session_state[k] = v
+        st.success("불러왔습니다!")
+        st.rerun()
 
     st.divider()
     st.markdown("#### ⚙️ 오늘의 입력값")
@@ -464,24 +256,24 @@ with st.sidebar:
     )
 
     st.divider()
-    if st.button("💾 현재 설정 저장", type="primary", use_container_width=True):
-        save_user_settings(USER_KEY, {
-            "ticker": ticker, "split_n": split_n, "total_principal": total_principal,
-            "current_shares": current_shares, "avg_price": avg_price, "t_value": t_value,
-            "prev_close": prev_close, "ma5": ma5,
+    if st.button("💾 설정 영구 저장", type="primary", use_container_width=True):
+        current_data = {
+            "ticker": st.session_state.ticker,
+            "split_n": st.session_state.split_n,
+            "total_principal": st.session_state.total_principal,
+            "current_shares": st.session_state.current_shares,
+            "avg_price": st.session_state.avg_price,
+            "t_value": st.session_state.t_value,
+            "prev_close": st.session_state.prev_close,
+            "ma5": st.session_state.ma5,
             "crash_max_drop_pct": st.session_state.get("crash_max_drop_pct", 50),
-        })
-        st.success("저장되었습니다!")
-
-    with st.expander("🔒 내 데이터 관리"):
-        st.caption("저장된 내 설정을 완전히 삭제합니다. 되돌릴 수 없습니다.")
-        if st.button("내 데이터 삭제", use_container_width=True):
-            delete_user_settings(USER_KEY)
-            st.success("삭제되었습니다. 새로고침 시 기본값으로 초기화됩니다.")
+        }
+        save_settings(current_data)
+        st.success("안전하게 저장되었습니다!")
 
 
 # =================================================================================
-# 5. 공통 계산값
+# 4. 공통 계산값
 # =================================================================================
 half_split = split_n / 2
 
@@ -513,7 +305,7 @@ reverse_exit_price = avg_price * (1 - target_pct)
 
 
 # =================================================================================
-# 6. 헤더 & 진행 상황 요약 카드 (FIRE GATE 스타일)
+# 5. 헤더 & 진행 상황 요약 카드 (FIRE GATE 스타일)
 # =================================================================================
 st.title(f"🔥 {ticker} 무한매수법 V4.0")
 
@@ -745,20 +537,16 @@ with tab2:
         with colr2:
             st.metric("👉 내일의 새로운 T값", f"{new_t:.3f}")
         with colr3:
-            st.metric("적용 공식", explanation)
+            st.metric("적용 오차 공식", explanation)
 
     st.caption(
-        "💡 내일 장 시작 전, 사이드바의 값들을 갱신한 뒤 '💾 현재 설정 저장'을 눌러두면 "
-        "다음 로그인 때도 이어서 사용할 수 있습니다."
+        "💡 내일 장 시작 전, 사이드바에서 T값을 이 새로운 값으로 변경하고 "
+        "'💾 설정 영구 저장' 버튼을 눌러두시면 안전하게 유지됩니다."
     )
-
-    with st.expander("📎 참고: 오늘 입력한 체결 수량"):
-        st.write(f"- 체결된 매수 수량: {filled_buy_qty:,} 주")
-        st.write(f"- 체결된 매도 수량: {filled_sell_qty:,} 주")
 
 
 # =================================================================================
-# 7. 하단 요약 정보
+# 6. 하단 요약 정보
 # =================================================================================
 st.divider()
 st.caption(
